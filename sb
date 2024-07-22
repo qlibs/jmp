@@ -108,8 +108,7 @@ main: // $CXX -O3
 > `const_branch` - Zero overhead compile-time branch (https://godbolt.org/z/xEboP8WYe)
 
 ```cpp
-template<auto tag = []{}> // Note: `tag` is required to delay `fun`
-                          // instantiation as get has to be dependent
+template<auto tag = []{}> // Note: `tag` is required to delay `fun` instantiation
 auto fun() {
   if constexpr (sb::const_branch<"compile-time branch">::get<tag>()) {
     std::puts("taken");
@@ -181,6 +180,7 @@ struct static_branch {
 ```cpp
 /**
  * Zero overhead named compile-time branch (default: not set)
+ * Note: Limited to a single translation unit
  * @tparam name branch name, ex. const_branch<"branch">
  */
 template<fixed_string Name>
@@ -416,6 +416,7 @@ inline namespace x86 {
 
   /**
    * Zero overhead named compile-time branch (default: not set)
+   * Note: Limited to a single translation unit
    * @tparam name branch name, ex. const_branch<"branch">
    */
   template<fixed_string Name>
