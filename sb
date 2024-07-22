@@ -15,7 +15,7 @@
 
 ---------------------------------------
 
-## [Minimal] Static branch library
+## Static/Const branch library
 
 > https://en.wikipedia.org/wiki/Branch_(computer_science)
 
@@ -43,7 +43,9 @@
 
 ---
 
-### Overview (https://godbolt.org/z/Wdqfrj7ac)
+### Overview
+
+> `static_branch` - minimal overhead run-time branch (https://godbolt.org/z/Wdqfrj7ac)
 
 ```cpp
 /**
@@ -54,7 +56,7 @@
  * [[gnu::always_inline]] void fun()
  */
 void fun() {
-  if (sb::static_branch<"my branch">::get()) {
+  if (sb::static_branch<"semi run-time branch">::get()) {
     std::puts("taken");
   } else {
     std::puts("not taken");
@@ -64,10 +66,10 @@ void fun() {
 int main() {
   fun(); // not taken
 
-  sb::static_branch<"my branch">::set(true);
+  static_assert(sb::static_branch<"semi run-time branch">::set(true));
   fun(); // taken
 
-  sb::static_branch<"my branch">::set(false);
+  static_assert(sb::static_branch<"semi run-time branch">::set(false));
   fun(); // not taken
 }
 ```
@@ -80,7 +82,7 @@ main:
  .Ltmp1:
   call puts@PLT # not taken
 
-  call static_branch<"my branch">::set(true) # relatively slow
+  call static_branch<"semi run-time branch">::set(true) # relatively slow
 
   lea rdi, [rip + .L.str.1]
   jmp .Ltmp2 # code patching (nop->jmp)
@@ -88,7 +90,7 @@ main:
  .Ltmp2:
   call puts@PLT # taken
 
-  call static_branch<"my branch">::set(false) # relatively slow
+  call static_branch<"semi run-time branch">::set(false) # relatively slow
 
   lea rdi, [rip + .L.str.1]
   nop # code patching (nop->nop)
@@ -106,15 +108,16 @@ main:
 ```
 
 ```cpp
-show perf results
+perf results
 ```
 
 ---
 
+> `const_branch` - no overhead compile-time branch (https://godbolt.org/z/9so3bKr1T)
+
 ```cpp
 void fun() {
-  // contant evaluation
-  if constexpr (sb::static_branch<"my branch">::get()) {
+  if constexpr (sb::const_branch<"compile-time branch">::get()) {
     std::puts("taken");
   } else {
     std::puts("not taken");
@@ -124,10 +127,10 @@ void fun() {
 int main() {
   fun(); // not taken
 
-  sb::static_branch<"my branch">::set(true);
+  static_assert(sb::const_branch<"compile-time branch">::set<true>());
   fun(); // taken
 
-  sb::static_branch<"my branch">::set(false);
+  static_assert(sb::const_branch<"compile-time branch">::set<false>());
   fun(); // not taken
 }
 ```
@@ -142,7 +145,7 @@ main:
 
 ```cpp
 /**
- * Named static branch (default: not set)
+ * Minimal overhead named run-time branch (default: not set)
  * @tparam name branch name, ex. static_branch<"branch">
  */
 template<fixed_string Name>
@@ -167,10 +170,26 @@ struct static_branch {
 ```
 
 ```cpp
-static constexpr auto protect =
-  [](entry* entry, u32 permissions = PROT_READ | PROT_WRITE | PROT_EXEC) {
-    return mprotect(entry->code & ~(page_size - 1u), sizeof(OP), permissions));
-  };
+/**
+ * No overhead named compile-time branch (default: not set)
+ * @tparam name branch name, ex. const_branch<"branch">
+ */
+template<fixed_string Name>
+struct const_branch {
+  /**
+   * Updates branch direction
+   * @param direction new branch direction
+   * @return true
+   */
+  template<bool Direction>
+  static consteval auto set() -> bool;
+
+  /**
+   * Returns current branch direction
+   * @return current branch direction
+   */
+  static consteval auto get() noexcept -> bool;
+};
 ```
 
 > Configuration
@@ -248,6 +267,8 @@ static constexpr auto protect =
       ret
     ```
 
+  > `const_branch` is using stateful template meta-programming (via friend injection) to maintain different versions.
+
 - How to integrate with CMake/CPM?
 
     ```
@@ -315,6 +336,7 @@ extern sb::entry __start___sb [[gnu::section("__sb")]];
 extern sb::entry __stop___sb  [[gnu::section("__sb")]];
 namespace sb::inline v1_0_0 {
 inline namespace x86 {
+  namespace detail {
   static constexpr u8 JMP[]{0xe9}; // https://www.felixcloutier.com/x86/jmp
   static constexpr u8 NOP[]{0x0f, 0x1f, 0x44, 0x00, 0x00}; // https://www.felixcloutier.com/x86/nop
   static constexpr void (*copy[])(const entry*){
@@ -325,19 +347,21 @@ inline namespace x86 {
       std::memcpy(reinterpret_cast<void*>(entry->code), &jmp, sizeof(jmp));
     }
   };
-  static constexpr auto protect = [](entry* entry, u32 permissions = PROT_READ | PROT_WRITE | PROT_EXEC) {
+  } // detail
+
+  static constexpr auto protect = [](entry* entry, u32 size, u32 permissions = PROT_READ | PROT_WRITE | PROT_EXEC) {
     if (static thread_local const auto page_size = sysconf(_SC_PAGESIZE); entry->state != permissions and
-      mprotect(reinterpret_cast<void*>(entry->code & ~(page_size - 1u)), sizeof(NOP), permissions)) {
+      mprotect(reinterpret_cast<void*>(entry->code & ~(page_size - 1u)), size, permissions)) {
       return false;
     }
     entry->state = permissions;
     return true;
   };
 
-/**
- * Named static branch (default: not set)
- * @tparam name branch name, ex. static_branch<"branch">
- */
+  /**
+   * Minimal overhead named run-time branch (default: not set)
+   * @tparam name branch name, ex. static_branch<"branch">
+   */
   template<fixed_string Name>
   struct static_branch {
     static constexpr u64 id = Name.hash();
@@ -352,8 +376,8 @@ inline namespace x86 {
     static auto set(const bool direction) noexcept -> bool {
       for (entry* entry = &__start___sb; entry < &__stop___sb; ++entry) {
         if (entry->id != id) continue;
-        if (not protect_policy(entry)) return false;
-        copy[direction](entry);
+        if (not protect_policy(entry, sizeof(detail::NOP))) return false;
+        detail::copy[direction](entry);
       }
       return true;
     }
@@ -363,6 +387,7 @@ inline namespace x86 {
      * @return current branch direction
      */
     [[gnu::always_inline]] static inline auto get() noexcept -> bool {
+      using detail::NOP;
       asm volatile goto("0:"
         ".byte %c3,%c4,%c5,%c6,%c7 \n"
         ".pushsection __sb, \"aw\" \n"
@@ -376,6 +401,46 @@ inline namespace x86 {
         : : true_);
       false_: return false;
       true_:  return true;
+    }
+  };
+
+  /**
+   * No overhead named compile-time branch (default: not set)
+   * @tparam name branch name, ex. const_branch<"branch">
+   */
+  template<fixed_string Name>
+  struct const_branch {
+    template<u32> struct version { constexpr auto friend $get(version); };
+    template<u32 V, bool R> struct new_version { constexpr auto friend $get(version<V>) { return R; } };
+
+    /**
+     * Updates branch direction
+     * @param direction new branch direction
+     * @return true
+     */
+    template<bool Direction, auto tag = []{}, u32 N = 0u>
+    static consteval auto set() -> bool {
+      if constexpr (requires { $get(version<N>{}); }) {
+        return set<Direction, tag, N + 1u>();
+      } else {
+        void(new_version<N, Direction>{});
+      }
+      return true;
+    }
+
+    /**
+     * Returns current branch direction
+     * @return current branch direction
+     */
+    template<auto tag = []{}, u32 N = 0u>
+    static consteval auto get() noexcept -> bool {
+      if constexpr (requires { $get(version<N>{}); }) {
+        return get<tag, N + 1u>();
+      } else if constexpr (N > 0u) {
+        return $get(version<N - 1u>{});
+      } else {
+        return false;
+      }
     }
   };
 } // namespace x86
@@ -394,8 +459,17 @@ static_assert(([] {
 
   // static_branch
   {
-    static_assert(sb::static_branch<"x86">::id == sb::static_branch<"x86">::id);
-    static_assert(sb::static_branch<"arm64">::id != sb::static_branch<"x86">::id);
+    static_assert(sb::static_branch<"sb::x86">::id == sb::static_branch<"sb::x86">::id);
+    static_assert(sb::static_branch<"sb::arm64">::id != sb::static_branch<"sb::x86">::id);
+  }
+
+  // const_branch
+  {
+    static_assert(not sb::const_branch<"sb::compile-time">::get<[]{}>());
+    static_assert(sb::const_branch<"sb::compile-time">::set<true, []{}>());
+    static_assert(sb::const_branch<"sb::compile-time">::get<[]{}>());
+    static_assert(sb::const_branch<"sb::compile-time">::set<false, []{}>());
+    static_assert(not sb::const_branch<"sb::compile-time">::get<[]{}>());
   }
 }(), true));
 #endif // NTEST
