@@ -149,9 +149,67 @@ static constexpr auto protect =
 
 - How does it work?
 
-- Is it thread-safe?
+  > `sb` is using technique called code patching, - which basically means that the code modifies itself.
 
-- Is inlining supported?
+  `sb` idea is based on https://docs.kernel.org/staging/static-keys.html and it requires asm goto support (gcc, clang).
+  `sb` currently only supports x86-64 Linux, but other platforms can be supported.
+
+  For example:
+
+    ```cpp
+    if (static_branch<"how does it work?">::get()) {
+      return 42;
+    } else {
+      return 0;
+    }
+    ```
+
+  will emit...
+
+    ```cpp
+    main:
+      .byte 15 31 68 0 0 # nop - https://www.felixcloutier.com/x86/nop
+      xor eax, eax # return 0
+      ret
+    .LBB1:
+      mov eax, 42 # return 42
+      ret
+    ```
+
+  which will effectively execute (static branch is set to false by default)...
+
+    ```cpp
+    main:
+      nop
+      xor eax, eax # return 0
+      ret
+    ```
+
+  now, if we change the branch direction (at run-time / before or after the branch):
+
+    ```cpp
+    static_branch<"how does it work?">::set(true);
+
+    if (static_branch<"how does it work?">::get()) {
+      return 42;
+    } else {
+      return 0;
+    }
+    ```
+
+  will emit...
+
+    ```cpp
+    main:
+      call static_branch<"how does it work?">::set(true); # slow, but it will do code patching for
+
+      jmp .LBB1: (nop->jmp - changed in the memory of the program via `set(true)` call)
+      xor eax, eax # return 0
+      ret
+    .LBB1:
+      mov eax, 42 # return 42
+      ret
+    ```
 
 - How to integrate with CMake/CPM?
 
