@@ -76,7 +76,7 @@ main:
  .Ltmp1:
   call puts@PLT # not taken
 
-  call static_branch<"my branch">::set(true) # slow
+  call static_branch<"my branch">::set(true) # relatively slow
 
   lea rdi, [rip + .L.str.1]
   jmp .Ltmp2 # code patching (nop->jmp)
@@ -84,7 +84,7 @@ main:
  .Ltmp2:
   call puts@PLT # taken
 
-  call static_branch<"my branch">::set(false) # slow
+  call static_branch<"my branch">::set(false) # relatively slow
 
   lea rdi, [rip + .L.str.1]
   nop # code patching (nop->nop)
@@ -164,7 +164,7 @@ static constexpr auto protect =
     }
     ```
 
-  will emit...
+  it will emit...
 
     ```cpp
     main:
@@ -185,7 +185,7 @@ static constexpr auto protect =
       ret
     ```
 
-  now, if we change the branch direction (at run-time / before or after the branch):
+  now, if we change the branch direction (at run-time / before or after the branch)...
 
     ```cpp
     static_branch<"how does it work?">::set(true);
@@ -197,11 +197,12 @@ static constexpr auto protect =
     }
     ```
 
-  will emit...
+  it will emit...
 
     ```cpp
     main:
-      call static_branch<"how does it work?">::set(true); # slow, but it will do code patching for
+      # relatively slow, but it will apply code patching for the new branch direction
+      call static_branch<"how does it work?">::set(true);
 
       jmp .LBB1: (nop->jmp - changed in the memory of the program via `set(true)` call)
       xor eax, eax # return 0
