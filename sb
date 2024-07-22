@@ -165,13 +165,13 @@ struct static_branch {
    * @return true on success, false otherwise
    */
   template<auto protect_policy = protect>
-  static auto set(const bool direction) noexcept -> bool;
+  static constexpr auto set(const bool direction) noexcept -> bool;
 
   /**
    * Returns current branch direction (thread-safe)
    * @return current branch direction
    */
-  [[gnu::always_inline]] [[nodiscard]] static inline auto get() noexcept -> bool;
+  [[gnu::always_inline]] [[nodiscard]] static constexpr auto get() noexcept -> bool;
 };
 ```
 
@@ -185,7 +185,7 @@ struct const_branch {
   /**
    * Updates branch direction
    * @param direction new branch direction
-   * @return true
+   * @return true (always)
    */
   template<bool Direction>
   static consteval auto set() noexcept -> bool;
