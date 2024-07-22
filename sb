@@ -1,0 +1,250 @@
+// <!--
+//
+// Copyright (c) 2024 Kris Jusiak (kris at jusiak dot net)
+//
+// Distributed under the Boost Software License, Version 1.0.
+// (See accompanying file LICENSE_1_0.txt or copy at
+// http://www.boost.org/LICENSE_1_0.txt)
+//
+#ifdef README
+// -->
+[![Boost Licence](http://img.shields.io/badge/license-boost-blue.svg)](http://www.boost.org/LICENSE_1_0.txt)
+[![Version](https://badge.fury.io/gh/boost-ext%2Fsb.svg)](https://github.com/boost-ext/sb/releases)
+[![build](https://img.shields.io/badge/build-blue.svg)]()
+[![Try it online](https://img.shields.io/badge/try%20it-online-blue.svg)]()
+
+---------------------------------------
+
+## [Minimal] Static branch library
+
+> https://en.wikipedia.org/wiki/Branch_(computer_science)
+
+### Features
+
+- Single header (https://raw.githubusercontent.com/boost-ext/sb/main/sb - for integration see [FAQ](#faq))
+- Minimal [API](#api)
+- Verifies itself upon include (can be disabled with `-DNTEST` - see [FAQ](#faq))
+
+### Requirements
+
+- C++20 ([clang++13+, g++11+, msvc-19.34+]())
+- x86-64 (https://en.wikipedia.org/wiki/X86-64)
+- Linux (https://en.wikipedia.org/wiki/Linux)
+
+---
+
+### Overview ()
+
+```cpp
+void fun() {
+  if (static_branch<"my branch">::get()) {
+    std::puts("taken");
+  } else {
+    std::puts("not taken");
+  }
+}
+
+int main() {
+  fun(); // not taken
+
+  static_branch<"my branch">::set(true);
+  fun(); // taken
+
+  static_branch<"my branch">::set(false);
+  fun(); // not taken
+}
+```
+
+---
+
+### API
+
+```cpp
+/**
+ * Named static branch (default: not set)
+ * @tparam name branch name, ex. static_branch<"branch">
+ */
+template<fixed_string Name>
+struct static_branch {
+  static constexpr u64 id = Name.hash();
+
+  /**
+   * Updates branch direction
+   * @tparam protect_policy policy (default: protect)
+   * @param direction new branch direction
+   * @return true on success, false otherwise
+   */
+  template<auto protect_policy = protect>
+  static auto set(const bool direction) noexcept -> bool;
+
+  /**
+   * Returns current branch direction
+   * @return current branch direction
+   */
+  [[gnu::always_inline]] static inline auto get() noexcept -> bool;
+};
+```
+
+> Configuration
+
+```cpp
+#define SB 1'0'0 // Current library version (SemVer)
+```
+
+---
+
+### FAQ
+
+- How does it work?
+
+- Is it thread-safe?
+
+- Is inlining supported?
+
+- How to integrate with CMake/CPM?
+
+    ```
+    CPMAddPackage(
+      Name sb
+      GITHUB_REPOSITORY boost-ext/sb
+      GIT_TAG v1.0.0
+    )
+    add_library(mp INTERFACE)
+    target_include_directories(mp SYSTEM INTERFACE ${mp_SOURCE_DIR})
+    add_library(sb::sb ALIAS sb)
+    ```
+
+    ```
+    target_link_libraries(${PROJECT_NAME} sb::sb);
+    ```
+
+- Acknowledgments
+
+  - https://docs.kernel.org/staging/static-keys.html
+  - https://gcc.gnu.org/onlinedocs/gcc/Extended-Asm.html
+  - https://www.intel.com/content/www/us/en/developer/articles/technical/intel-sdm.html
+  - https://www.agner.org/optimize/instruction_tables.pdf
+  - https://www.felixcloutier.com/x86
+  - https://uops.info/table.html
+  - https://arxiv.org/abs/2308.14185
+
+<!--
+#else
+#ifndef SB
+#define SB 1'0'0 // SemVer
+#pragma GCC system_header
+
+#include <cstring>    // std::memcpy
+#include <unistd.h>   // PAGESIZE
+#include <sys/mman.h> // mprotect
+
+namespace sb::inline v1_0_0 {
+using u8  = __UINT8_TYPE__;
+using u16 = __UINT16_TYPE__;
+using u32 = __UINT32_TYPE__;
+using u64 = __UINT64_TYPE__;
+struct entry { u64 id{}; u64 code{}; u64 offset{}; u64 state{}; };
+template<class T, u32 N>
+struct fixed_string {
+  consteval explicit(false) fixed_string(const T* str) noexcept {
+    for (decltype(N) i{}; i < N; ++i) { data[i] = str[i]; }
+  }
+  [[nodiscard]] consteval auto size() const noexcept { return N; }
+  [[nodiscard]] consteval auto hash(const u32 i = {}) const noexcept -> u32 {
+    return i < N ? static_cast<u32>(data[i]) + 33u * hash(data[i + 1u]) : 5381u;
+  }
+  T data[N]{};
+};
+template<class T, u32 N> fixed_string(const T (&str)[N]) -> fixed_string<T, N>;
+} // sb
+extern sb::entry __start___sb [[gnu::section("__sb")]];
+extern sb::entry __stop___sb  [[gnu::section("__sb")]];
+namespace sb::inline v1_0_0 {
+inline namespace x86 {
+  static constexpr u8 JMP[]{0xe9}; // https://www.felixcloutier.com/x86/jmp
+  static constexpr u8 NOP[]{0x0f, 0x1f, 0x44, 0x00, 0x00}; // https://www.felixcloutier.com/x86/nop
+  static constexpr void (*copy[])(const entry*){
+    [](const auto* entry) { std::memcpy(reinterpret_cast<void*>(entry->code), &NOP, sizeof(NOP)); },
+    [](const auto* entry) {
+      struct [[gnu::packed]] { u8 op; u32 offset; } jmp{.op = JMP[0], .offset = static_cast<u32>(entry->offset)};
+      static_assert(sizeof(jmp) == sizeof(NOP));
+      std::memcpy(reinterpret_cast<void*>(entry->code), &jmp, sizeof(jmp));
+    }
+  };
+  static constexpr auto protect = [](entry* entry, u32 permissions = PROT_READ | PROT_WRITE | PROT_EXEC) {
+    static thread_local const auto page_size = sysconf(_SC_PAGESIZE);
+    if (entry->state != permissions and
+      mprotect(reinterpret_cast<void*>(entry->code & ~(page_size - 1u)), sizeof(NOP), permissions)) {
+      return false;
+    }
+    entry->state = permissions;
+    return true;
+  };
+
+/**
+ * Named static branch (default: not set)
+ * @tparam name branch name, ex. static_branch<"branch">
+ */
+  template<fixed_string Name>
+  struct static_branch {
+    static constexpr u64 id = Name.hash();
+
+    /**
+     * Updates branch direction
+     * @tparam protect_policy policy (default: protect)
+     * @param direction new branch direction
+     * @return true on success, false otherwise
+     */
+    template<auto protect_policy = protect>
+    static auto set(const bool direction) noexcept -> bool {
+      for (entry* entry = &__start___sb; entry < &__stop___sb; ++entry) {
+        if (entry->id != id) continue;
+        if (not protect_policy(entry)) return false;
+        copy[direction](entry);
+      }
+      return true;
+    }
+
+    /**
+     * Returns current branch direction
+     * @return current branch direction
+     */
+    [[gnu::always_inline]] static inline auto get() noexcept -> bool {
+      asm volatile goto("0:"
+        ".byte %c3,%c4,%c5,%c6,%c7 \n"
+        ".pushsection __sb, \"aw\" \n"
+        ".balign %c0 \n"
+        ".quad %c1, 0b, %l[true_] - (0b + %c2), 0 \n"
+        ".popsection \n"
+        : : "i"(sizeof(void*)),
+            "i"(id),
+            "i"(sizeof(NOP)),
+            "i"(NOP[0]), "i"(NOP[1]), "i"(NOP[2]), "i"(NOP[3]), "i"(NOP[4])
+        : : true_);
+      false_: return false;
+      true_:  return true;
+    }
+  };
+} // namespace x86
+} // namespace sb
+
+#ifndef NTEST
+static_assert(([] {
+  // fixed_string
+  {
+    static_assert(sizeof("") == sb::fixed_string{""}.size());
+    static_assert(sizeof("x86") == sb::fixed_string{"x86"}.size());
+    static_assert(sizeof("arm64") != sb::fixed_string{"x86"}.size());
+    static_assert(sb::fixed_string{"x86"}.hash() == sb::fixed_string{"x86"}.hash());
+    static_assert(sb::fixed_string{"arm64"}.hash() != sb::fixed_string{"x86"}.hash());
+  }
+
+  // static_branch
+  {
+    static_assert(sb::static_branch<"x86">::id == sb::static_branch<"x86">::id);
+    static_assert(sb::static_branch<"arm64">::id != sb::static_branch<"x86">::id);
+  }
+}(), true));
+#endif // NTEST
+#endif // SB
+#endif // README
