@@ -10,7 +10,7 @@
 // -->
 [![Boost Licence](http://img.shields.io/badge/license-boost-blue.svg)](http://www.boost.org/LICENSE_1_0.txt)
 [![Version](https://badge.fury.io/gh/boost-ext%2Fsb.svg)](https://github.com/boost-ext/sb/releases)
-[![build](https://img.shields.io/badge/build-blue.svg)](https://godbolt.org/z/zaTjG1YMr)
+[![build](https://img.shields.io/badge/build-blue.svg)](https://godbolt.org/z/WMb9f7MeW)
 [![Try it online](https://img.shields.io/badge/try%20it-online-blue.svg)](https://godbolt.org/z/Wdqfrj7ac)
 
 ---------------------------------------
@@ -40,7 +40,7 @@ examples tracing, logging, configuration
 
 ### Requirements
 
-- C++20 ([clang++12+, g++10+](https://godbolt.org/z/zaTjG1YMr))
+- C++20 ([clang++12+, g++10+](https://godbolt.org/z/WMb9f7MeW))
 - x86-64 (https://en.wikipedia.org/wiki/X86-64)
 - Linux (https://en.wikipedia.org/wiki/Linux)
 
@@ -111,7 +111,7 @@ show perf results
  */
 template<fixed_string Name>
 struct static_branch {
-  static constexpr u64 id = Name.hash();
+  static constexpr auto id = Name.hash();
 
   /**
    * Updates branch direction (not thread-safe)
@@ -151,8 +151,8 @@ static constexpr auto protect =
 
   > `sb` is using technique called code patching, - which basically means that the code modifies itself.
 
-  `sb` idea is based on https://docs.kernel.org/staging/static-keys.html and it requires asm goto support (gcc, clang).
-  `sb` currently only supports x86-64 Linux, but other platforms can be supported.
+  `sb` idea is based on https://docs.kernel.org/staging/static-keys.html and it requires `asm goto support` (gcc, clang).
+  `sb` currently only supports x86-64 Linux, but other platforms can be added using the same approach.
 
   For example:
 
