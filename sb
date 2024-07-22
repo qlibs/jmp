@@ -103,6 +103,13 @@ struct static_branch {
 };
 ```
 
+```cpp
+static constexpr auto protect =
+  [](entry* entry, u32 permissions = PROT_READ | PROT_WRITE | PROT_EXEC) {
+    return mprotect(entry->code & ~(page_size - 1u), sizeof(OP), permissions));
+  };
+```
+
 > Configuration
 
 ```cpp
