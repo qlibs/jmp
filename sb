@@ -37,9 +37,7 @@
 
 ### Requirements
 
-- C++20 ([clang++12+, g++10+](https://godbolt.org/z/vnhcdvMGs))
-- x86-64 (https://en.wikipedia.org/wiki/X86-64)
-- Linux (https://en.wikipedia.org/wiki/Linux)
+- C++20 ([clang++12+, g++10+](https://godbolt.org/z/vnhcdvMGs)) / x86-64 (https://en.wikipedia.org/wiki/X86-64) / Linux (https://en.wikipedia.org/wiki/Linux)
 
 ---
 
