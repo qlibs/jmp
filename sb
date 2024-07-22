@@ -106,7 +106,7 @@ perf results
 
 ---
 
-> `const_branch` - No overhead compile-time branch (https://godbolt.org/z/PMha7ebzf)
+> `const_branch` - Zero overhead compile-time branch (https://godbolt.org/z/PMha7ebzf)
 
 ```cpp
 void fun() {
@@ -164,7 +164,7 @@ struct static_branch {
 
 ```cpp
 /**
- * No overhead named compile-time branch (default: not set)
+ * Zero overhead named compile-time branch (default: not set)
  * @tparam name branch name, ex. const_branch<"branch">
  */
 template<fixed_string Name>
@@ -398,7 +398,7 @@ inline namespace x86 {
   };
 
   /**
-   * No overhead named compile-time branch (default: not set)
+   * Zero overhead named compile-time branch (default: not set)
    * @tparam name branch name, ex. const_branch<"branch">
    */
   template<fixed_string Name>
