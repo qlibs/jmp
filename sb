@@ -64,10 +64,10 @@ void fun() {
 int main() {
   fun(); // not taken
 
-  static_assert(sb::static_branch<"semi run-time branch">::set(true));
+  sb::static_branch<"semi run-time branch">::set(true);
   fun(); // taken
 
-  static_assert(sb::static_branch<"semi run-time branch">::set(false));
+  sb::static_branch<"semi run-time branch">::set(false);
   fun(); // not taken
 }
 ```
