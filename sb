@@ -249,7 +249,7 @@ struct const_branch {
 
     ```cpp
     main:
-      # relatively slow, but it will apply code patching for the new branch direction
+      # relatively slow, it will 'code patch' the new branch direction (nop->jmp or jmp->nop)
       call static_branch<"how does it work?">::set(true);
 
       jmp .LBB1: (nop->jmp - changed in the memory of the program via `set(true)` call)
