@@ -91,7 +91,7 @@ main: // $CXX -O3
   call static_branch<"semi run-time branch">::set(false) # relatively slow
 
   lea rdi, [rip + .L.str.1]
-  nop # code patching (nop->nop)
+  nop # code patching (jmp->nop)
   lea rdi, [rip + .L.str.2]
  .Ltmp3:
   call puts@PLT # not taken
