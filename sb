@@ -100,10 +100,6 @@ main: // $CXX -O3
 .L.str.2: .asciz "not taken"
 ```
 
-```cpp
-perf results
-```
-
 ---
 
 > `const_branch` - Zero overhead compile-time branch (https://godbolt.org/z/xEboP8WYe)
