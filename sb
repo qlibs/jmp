@@ -210,7 +210,7 @@ struct const_branch {
 
 - How does it work?
 
-  > `sb` is using technique called code patching, - which basically means that the code modifies itself.
+  > `sb` is using technique called code patching - which basically means that the code modifies itself.
 
   `static_branch` is based on https://docs.kernel.org/staging/static-keys.html and it requires `asm goto` support (gcc, clang).
   `sb` currently supports x86-64 Linux, but other platforms can be added using the same technique.
