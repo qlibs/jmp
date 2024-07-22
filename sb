@@ -126,7 +126,7 @@ int main() {
   fun(); // taken
 
   static_assert(sb::const_branch<"compile-time branch">::set<false>());
-  fun(); // taken
+  fun(); // not taken
 }
 ```
 
