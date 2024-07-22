@@ -27,7 +27,7 @@
       - `and/or` branches are expensive to compute/access
       - `and/or` branches are hard to learn by the hardware predictor due to their random nature
 
-> Examples: logging, tracing, configuration, ...
+> Examples: logging, tracing, configuration, algo, ...
 
 ### Features
 
