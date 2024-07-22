@@ -10,7 +10,7 @@
 // -->
 [![Boost Licence](http://img.shields.io/badge/license-boost-blue.svg)](http://www.boost.org/LICENSE_1_0.txt)
 [![Version](https://badge.fury.io/gh/boost-ext%2Fsb.svg)](https://github.com/boost-ext/sb/releases)
-[![build](https://img.shields.io/badge/build-blue.svg)](https://godbolt.org/z/vnhcdvMGs)
+[![build](https://img.shields.io/badge/build-blue.svg)](https://godbolt.org/z/6TYYM7KcT)
 [![Try it online](https://img.shields.io/badge/try%20it-online-blue.svg)](https://godbolt.org/z/Wdqfrj7ac)
 
 ---------------------------------------
@@ -37,7 +37,7 @@
 
 ### Requirements
 
-- C++20 ([clang++12+, g++10+](https://godbolt.org/z/vnhcdvMGs)) / [x86-64](https://en.wikipedia.org/wiki/X86-64) / [Linux](https://en.wikipedia.org/wiki/Linux)
+- C++20 ([clang++13+, g++10+](https://godbolt.org/z/6TYYM7KcT)) / [x86-64](https://en.wikipedia.org/wiki/X86-64) / [Linux](https://en.wikipedia.org/wiki/Linux)
 
 ---
 
@@ -324,8 +324,8 @@ using u64 = __UINT64_TYPE__;
 struct entry { u64 id{}; u64 code{}; u64 offset{}; u64 state{}; };
 template<class T, u32 N>
 struct fixed_string {
-  consteval explicit(false) fixed_string(const T* str) noexcept {
-    for (decltype(N) i{}; i < N; ++i) { data[i] = str[i]; }
+  consteval explicit(false) fixed_string(const T (&str)[N]) noexcept {
+    for (u32 i = 0u; i < N; ++i) { data[i] = str[i]; }
   }
   [[nodiscard]] consteval auto size() const noexcept { return N; }
   [[nodiscard]] consteval auto hash() const noexcept -> u32 {
@@ -334,6 +334,8 @@ struct fixed_string {
     u32 hash = FNV_OFFSET;
     for (auto i = 0u; i < N; ++i) {
       hash ^= static_cast<u32>(data[i]);
+    }
+    for (auto i = 0u; i < N; ++i) {
       hash *= FNV_32_PRIME;
     }
     return hash;
@@ -383,7 +385,7 @@ inline namespace x86 {
      * @return true on success, false otherwise
      */
     template<auto protect_policy = protect>
-    static auto set(const bool direction) noexcept -> bool {
+    static constexpr auto set(const bool direction) noexcept -> bool {
       for (entry* entry = &__start___sb; entry < &__stop___sb; ++entry) {
         if (entry->id != id) continue;
         if (not protect_policy(entry, sizeof(detail::NOP))) return false;
@@ -396,7 +398,7 @@ inline namespace x86 {
      * Returns current branch direction (thread-safe)
      * @return current branch direction
      */
-    [[gnu::always_inline]] [[nodiscard]] static inline auto get() noexcept -> bool {
+    [[gnu::always_inline]] [[nodiscard]] static constexpr auto get() noexcept -> bool {
       using detail::NOP;
       asm volatile goto("0:"
         ".byte %c3,%c4,%c5,%c6,%c7 \n"
@@ -404,7 +406,7 @@ inline namespace x86 {
         ".balign %c0 \n"
         ".quad %c1, 0b, %l[true_] - (0b + %c2), 0 \n"
         ".popsection \n"
-        : : "i"(sizeof(void*)),
+        : : "i"(alignof(u64)),
             "i"(id),
             "i"(sizeof(NOP)),
             "i"(NOP[0]), "i"(NOP[1]), "i"(NOP[2]), "i"(NOP[3]), "i"(NOP[4])
