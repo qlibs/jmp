@@ -96,6 +96,9 @@ main: // $CXX -O3
  .Ltmp3:
   call puts@PLT # not taken
 
+  xor  eax, eax # return 0
+  ret
+
 .L.str.1: .asciz "taken"
 .L.str.2: .asciz "not taken"
 ```
