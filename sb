@@ -30,6 +30,8 @@
 trade-offs - see faq
 overhead - see faq
 
+examples tracing, logging, configuration
+
 ### Features
 
 - Single header (https://raw.githubusercontent.com/boost-ext/sb/main/sb - for integration see [FAQ](#faq))
@@ -85,7 +87,7 @@ struct static_branch {
   static constexpr u64 id = Name.hash();
 
   /**
-   * Updates branch direction
+   * Updates branch direction (not thread-safe)
    * @tparam protect_policy policy (default: protect)
    * @param direction new branch direction
    * @return true on success, false otherwise
@@ -94,7 +96,7 @@ struct static_branch {
   static auto set(const bool direction) noexcept -> bool;
 
   /**
-   * Returns current branch direction
+   * Returns current branch direction (thread-safe)
    * @return current branch direction
    */
   [[gnu::always_inline]] static inline auto get() noexcept -> bool;
@@ -166,8 +168,15 @@ struct fixed_string {
     for (decltype(N) i{}; i < N; ++i) { data[i] = str[i]; }
   }
   [[nodiscard]] consteval auto size() const noexcept { return N; }
-  [[nodiscard]] consteval auto hash(const u32 i = {}) const noexcept -> u32 {
-    return i < N ? static_cast<u32>(data[i]) + 33u * hash(data[i + 1u]) : 5381u;
+  [[nodiscard]] consteval auto hash() const noexcept -> u32 {
+    constexpr u32 FNV_OFFSET = 2166136261u;
+    constexpr u32 FNV_32_PRIME = 16777619u;
+    u32 hash = FNV_OFFSET;
+    for (auto i = 0u; i < N; ++i) {
+      hash ^= static_cast<u32>(data[i]);
+      hash *= FNV_32_PRIME;
+    }
+    return hash;
   }
   T data[N]{};
 };
@@ -205,7 +214,7 @@ inline namespace x86 {
     static constexpr u64 id = Name.hash();
 
     /**
-     * Updates branch direction
+     * Updates branch direction (not thread-safe)
      * @tparam protect_policy policy (default: protect)
      * @param direction new branch direction
      * @return true on success, false otherwise
@@ -221,7 +230,7 @@ inline namespace x86 {
     }
 
     /**
-     * Returns current branch direction
+     * Returns current branch direction (thread-safe)
      * @return current branch direction
      */
     [[gnu::always_inline]] static inline auto get() noexcept -> bool {
