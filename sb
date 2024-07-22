@@ -19,7 +19,7 @@
 
 > https://en.wikipedia.org/wiki/Branch_(computer_science)
 
-### Use cases (See [Acknowledgments](#faq))
+### Use cases
 
 > When performance matters (smaller overhead than conditional code) and
   in case when branches are not changing too often and/or
@@ -146,10 +146,10 @@ static constexpr auto protect =
 
   > `sb` is using technique called code patching, - which basically means that the code modifies itself.
 
-  `sb` idea is based on https://docs.kernel.org/staging/static-keys.html and it requires `asm goto support` (gcc, clang).
-  `sb` currently only supports x86-64 Linux, but other platforms can be added using the same approach.
+  `sb` idea is based on https://docs.kernel.org/staging/static-keys.html and it requires `asm goto` support (gcc, clang).
+  `sb` currently supports x86-64 Linux, but other platforms can be added using the same approach.
 
-  For example:
+  Example:
 
     ```cpp
     if (static_branch<"how does it work?">::get()) {
