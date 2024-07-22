@@ -19,18 +19,13 @@
 
 > https://en.wikipedia.org/wiki/Branch_(computer_science)
 
-### Use case
+### Use cases (See [Acknowledgments](#faq))
 
-- See acknowledgments
-
-> not changing often
-> unpredictable (when hardware predictor may struggle), where branch is costly (memory access/cache eviction or computatley expensive)
-> configuration
-
-trade-offs - see faq
-overhead - see faq
-
-examples tracing, logging, configuration
+> When performance matters (smaller overhead than conditional code) and
+  in case when branches are not changing too often and/or
+  are expensive to compute/access and
+  are hard to learn by the hardware predictor due to the random nature.
+  For example: logging, tracing, configuration, ...
 
 ### Features
 
