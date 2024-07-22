@@ -45,11 +45,11 @@
 
 ### Overview
 
-> `static_branch` - minimal overhead run-time branch (https://godbolt.org/z/Wdqfrj7ac)
+> `static_branch` - Minimal overhead (nop/jmp) run-time branch (https://godbolt.org/z/Wdqfrj7ac)
 
 ```cpp
 /**
- * Note: sm supports branches inside inline/noinline/constexpr/... functions.
+ * Note: `fun` can be inline/noinline/constexpr/etc.
  * constexpr void fun();
  * inline void fun();
  * [[gnu::noinline]] void fun()
@@ -113,7 +113,7 @@ perf results
 
 ---
 
-> `const_branch` - no overhead compile-time branch (https://godbolt.org/z/9so3bKr1T)
+> `const_branch` - No overhead compile-time branch (https://godbolt.org/z/PMha7ebzf)
 
 ```cpp
 void fun() {
@@ -267,7 +267,7 @@ struct const_branch {
       ret
     ```
 
-  > `const_branch` is using stateful template meta-programming (via friend injection) to maintain different versions.
+  > `const_branch` is using stateful template meta-programming (via friend injection) to maintain different branch versions.
 
 - How to integrate with CMake/CPM?
 
@@ -448,7 +448,7 @@ inline namespace x86 {
 
 #ifndef NTEST
 static_assert(([] {
-  // fixed_string
+  // sb::fixed_string
   {
     static_assert(sizeof("") == sb::fixed_string{""}.size());
     static_assert(sizeof("x86") == sb::fixed_string{"x86"}.size());
@@ -457,19 +457,19 @@ static_assert(([] {
     static_assert(sb::fixed_string{"arm64"}.hash() != sb::fixed_string{"x86"}.hash());
   }
 
-  // static_branch
+  // sb::static_branch
   {
-    static_assert(sb::static_branch<"sb::x86">::id == sb::static_branch<"sb::x86">::id);
-    static_assert(sb::static_branch<"sb::arm64">::id != sb::static_branch<"sb::x86">::id);
+    static_assert(sb::static_branch<"::sb::x86">::id == sb::static_branch<"::sb::x86">::id);
+    static_assert(sb::static_branch<"::sb::arm64">::id != sb::static_branch<"::sb::x86">::id);
   }
 
-  // const_branch
+  // sb::const_branch
   {
-    static_assert(not sb::const_branch<"sb::compile-time">::get<[]{}>());
-    static_assert(sb::const_branch<"sb::compile-time">::set<true, []{}>());
-    static_assert(sb::const_branch<"sb::compile-time">::get<[]{}>());
-    static_assert(sb::const_branch<"sb::compile-time">::set<false, []{}>());
-    static_assert(not sb::const_branch<"sb::compile-time">::get<[]{}>());
+    static_assert(not sb::const_branch<"::sb::compile-time">::get<[]{}>());
+    static_assert(sb::const_branch<"::sb::compile-time">::set<true, []{}>());
+    static_assert(sb::const_branch<"::sb::compile-time">::get<[]{}>());
+    static_assert(sb::const_branch<"::sb::compile-time">::set<false, []{}>());
+    static_assert(not sb::const_branch<"::sb::compile-time">::get<[]{}>());
   }
 }(), true));
 #endif // NTEST
