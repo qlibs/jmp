@@ -24,8 +24,8 @@
 > When performance matters
   - `and` branches are known at compile-time
   - `or` branches are not changing often at run-time
-      - `and/or` branches are expensive to compute/access
-      - `and/or` branches are hard to learn by the hardware predictor due to their random nature
+      - `and/or` branches are expensive to compute/require memory access
+      - `and/or` branches are hard to learn by the hardware branch predictor due to their random nature
 
 > Examples: logging, tracing, configuration, algo, ...
 
@@ -200,7 +200,7 @@ struct const_branch {
   > `sb` is using technique called code patching, - which basically means that the code modifies itself.
 
   `sb` idea is based on https://docs.kernel.org/staging/static-keys.html and it requires `asm goto` support (gcc, clang).
-  `sb` currently supports x86-64 Linux, but other platforms can be added using the same approach.
+  `sb` currently supports x86-64 Linux, but other platforms can be added using the same technique.
 
   Example:
 
@@ -326,7 +326,7 @@ struct fixed_string {
 template<class T, u32 N> fixed_string(const T (&str)[N]) -> fixed_string<T, N>;
 } // sb
 extern sb::entry __start___sb [[gnu::section("__sb")]];
-extern sb::entry __stop___sb  [[gnu::section("__sb")]];
+extern sb::entry __stop___sb [[gnu::section("__sb")]];
 namespace sb::inline v1_0_0 {
 inline namespace x86 {
   namespace detail {
