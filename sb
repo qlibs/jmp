@@ -69,7 +69,34 @@ int main() {
 ```
 
 ```cpp
-show assembly
+main:
+  lea rdi, [rip + .L.str.1]
+  nop # code patching (nop->nop)
+  lea rdi, [rip + .L.str.2]
+ .Ltmp1:
+  call puts@PLT # not taken
+
+  call static_branch<"my branch">::set(true) # slow
+
+  lea rdi, [rip + .L.str.1]
+  jmp .Ltmp2 # code patching (nop->jmp)
+  lea rdi, [rip + .L.str.2]
+ .Ltmp2:
+  call puts@PLT # taken
+
+  call static_branch<"my branch">::set(false) # slow
+
+  lea rdi, [rip + .L.str.1]
+  nop # code patching (nop->nop)
+  lea rdi, [rip + .L.str.2]
+ .Ltmp3:
+  call puts@PLT # not taken
+
+.L.str.1: .asciz  "taken"
+.L.str.2: .asciz  "not taken"
+```
+
+```cpp
 show perf results
 ```
 
