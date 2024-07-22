@@ -106,7 +106,7 @@ show perf results
  */
 template<fixed_string Name>
 struct static_branch {
-  static constexpr auto id = Name.hash();
+  static constexpr u64 id = Name.hash();
 
   /**
    * Updates branch direction (not thread-safe)
@@ -299,7 +299,7 @@ inline namespace x86 {
  */
   template<fixed_string Name>
   struct static_branch {
-    static constexpr u64 id = Name.hash();
+    static constexpr auto id = Name.hash();
 
     /**
      * Updates branch direction (not thread-safe)
