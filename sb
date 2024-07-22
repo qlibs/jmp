@@ -22,10 +22,10 @@
 ### Use cases
 
 > When performance matters
-  - and branches are known at compile-time
-  - or branches are not changing often at run-time
-      - and branches are expensive to compute/access
-      - and branches are hard to learn by the hardware predictor due to their random nature
+  - `and` branches are known at compile-time
+  - `or` branches are not changing often at run-time
+      - `and/or` branches are expensive to compute/access
+      - `and/or` branches are hard to learn by the hardware predictor due to their random nature
 
 > Examples: logging, tracing, configuration, ...
 
