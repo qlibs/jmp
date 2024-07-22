@@ -10,8 +10,8 @@
 // -->
 [![Boost Licence](http://img.shields.io/badge/license-boost-blue.svg)](http://www.boost.org/LICENSE_1_0.txt)
 [![Version](https://badge.fury.io/gh/boost-ext%2Fsb.svg)](https://github.com/boost-ext/sb/releases)
-[![build](https://img.shields.io/badge/build-blue.svg)](https://godbolt.org/z/6TYYM7KcT)
-[![Try it online](https://img.shields.io/badge/try%20it-online-blue.svg)](https://godbolt.org/z/Wdqfrj7ac)
+[![build](https://img.shields.io/badge/build-blue.svg)](https://godbolt.org/z/xK6qrc3W8)
+[![Try it online](https://img.shields.io/badge/try%20it-online-blue.svg)](https://godbolt.org/z/xK6qrc3W8)
 
 ---------------------------------------
 
@@ -37,13 +37,13 @@
 
 ### Requirements
 
-- C++20 ([clang++13+, g++10+](https://godbolt.org/z/6TYYM7KcT)) / [x86-64](https://en.wikipedia.org/wiki/X86-64) / [Linux](https://en.wikipedia.org/wiki/Linux)
+- C++20 ([clang++15+, g++10+](https://godbolt.org/z/xK6qrc3W8)) / [x86-64](https://en.wikipedia.org/wiki/X86-64) / [Linux](https://en.wikipedia.org/wiki/Linux)
 
 ---
 
 ### Overview
 
-> `static_branch` - Minimal overhead (nop/jmp) run-time branch (https://godbolt.org/z/Wdqfrj7ac)
+> `static_branch` - Minimal overhead (nop/jmp) run-time branch (https://godbolt.org/z/xK6qrc3W8)
 
 ```cpp
 /**
@@ -334,8 +334,6 @@ struct fixed_string {
     u32 hash = FNV_OFFSET;
     for (auto i = 0u; i < N; ++i) {
       hash ^= static_cast<u32>(data[i]);
-    }
-    for (auto i = 0u; i < N; ++i) {
       hash *= FNV_32_PRIME;
     }
     return hash;
