@@ -10,14 +10,25 @@
 // -->
 [![Boost Licence](http://img.shields.io/badge/license-boost-blue.svg)](http://www.boost.org/LICENSE_1_0.txt)
 [![Version](https://badge.fury.io/gh/boost-ext%2Fsb.svg)](https://github.com/boost-ext/sb/releases)
-[![build](https://img.shields.io/badge/build-blue.svg)]()
-[![Try it online](https://img.shields.io/badge/try%20it-online-blue.svg)]()
+[![build](https://img.shields.io/badge/build-blue.svg)](https://godbolt.org/z/zaTjG1YMr)
+[![Try it online](https://img.shields.io/badge/try%20it-online-blue.svg)](https://godbolt.org/z/Wdqfrj7ac)
 
 ---------------------------------------
 
 ## [Minimal] Static branch library
 
 > https://en.wikipedia.org/wiki/Branch_(computer_science)
+
+### Use case
+
+- See acknowledgments
+
+> not changing often
+> unpredictable (when hardware predictor may struggle), where branch is costly (memory access/cache eviction or computatley expensive)
+> configuration
+
+trade-offs - see faq
+overhead - see faq
 
 ### Features
 
@@ -27,17 +38,17 @@
 
 ### Requirements
 
-- C++20 ([clang++13+, g++11+, msvc-19.34+]())
+- C++20 ([clang++12+, g++10+](https://godbolt.org/z/zaTjG1YMr))
 - x86-64 (https://en.wikipedia.org/wiki/X86-64)
 - Linux (https://en.wikipedia.org/wiki/Linux)
 
 ---
 
-### Overview ()
+### Overview (https://godbolt.org/z/Wdqfrj7ac)
 
 ```cpp
 void fun() {
-  if (static_branch<"my branch">::get()) {
+  if (sb::static_branch<"my branch">::get()) {
     std::puts("taken");
   } else {
     std::puts("not taken");
@@ -47,12 +58,17 @@ void fun() {
 int main() {
   fun(); // not taken
 
-  static_branch<"my branch">::set(true);
+  sb::static_branch<"my branch">::set(true);
   fun(); // taken
 
-  static_branch<"my branch">::set(false);
+  sb::static_branch<"my branch">::set(false);
   fun(); // not taken
 }
+```
+
+```cpp
+show assembly
+show perf results
 ```
 
 ---
@@ -172,8 +188,7 @@ inline namespace x86 {
     }
   };
   static constexpr auto protect = [](entry* entry, u32 permissions = PROT_READ | PROT_WRITE | PROT_EXEC) {
-    static thread_local const auto page_size = sysconf(_SC_PAGESIZE);
-    if (entry->state != permissions and
+    if (static thread_local const auto page_size = sysconf(_SC_PAGESIZE); entry->state != permissions and
       mprotect(reinterpret_cast<void*>(entry->code & ~(page_size - 1u)), sizeof(NOP), permissions)) {
       return false;
     }
