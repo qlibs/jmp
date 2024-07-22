@@ -73,7 +73,7 @@ int main() {
 ```
 
 ```cpp
-main:
+main: // $CXX -O3
   lea rdi, [rip + .L.str.1]
   nop # code patching (nop->nop)
   lea rdi, [rip + .L.str.2]
@@ -96,8 +96,8 @@ main:
  .Ltmp3:
   call puts@PLT # not taken
 
-.L.str.1: .asciz  "taken"
-.L.str.2: .asciz  "not taken"
+.L.str.1: .asciz "taken"
+.L.str.2: .asciz "not taken"
 ```
 
 ```cpp
@@ -106,11 +106,13 @@ perf results
 
 ---
 
-> `const_branch` - Zero overhead compile-time branch (https://godbolt.org/z/PMha7ebzf)
+> `const_branch` - Zero overhead compile-time branch (https://godbolt.org/z/xEboP8WYe)
 
 ```cpp
-void fun() {
-  if constexpr (sb::const_branch<"compile-time branch">::get()) {
+template<auto tag = []{}> // Note: `tag` is required to delay `fun`
+                          // instantiation as get has to be dependent
+auto fun() {
+  if constexpr (sb::const_branch<"compile-time branch">::get<tag>()) {
     std::puts("taken");
   } else {
     std::puts("not taken");
@@ -124,12 +126,27 @@ int main() {
   fun(); // taken
 
   static_assert(sb::const_branch<"compile-time branch">::set<false>());
-  fun(); // not taken
+  fun(); // taken
 }
 ```
 
 ```cpp
-main:
+main: // $CXX -O3
+  lea  rbx, [rip + .L.str.1]
+  mov  rdi, rbx
+  call puts@PLT # not taken
+
+  lea  rdi, [rip + .L.str.2]
+  call puts@PLT # taken
+
+  mov  rdi, rbx
+  call puts@PLT # not taken
+
+  xor  eax, eax # return 0
+  ret
+
+.L.str.1: .asciz "not taken"
+.L.str.2: .asciz "taken"
 ```
 
 ---
@@ -158,7 +175,7 @@ struct static_branch {
    * Returns current branch direction (thread-safe)
    * @return current branch direction
    */
-  [[gnu::always_inline]] static inline auto get() noexcept -> bool;
+  [[gnu::always_inline]] [[nodiscard]] static inline auto get() noexcept -> bool;
 };
 ```
 
@@ -181,7 +198,7 @@ struct const_branch {
    * Returns current branch direction
    * @return current branch direction
    */
-  static consteval auto get() noexcept -> bool;
+  [[nodiscard]] static consteval auto get() noexcept -> bool;
 };
 ```
 
@@ -379,7 +396,7 @@ inline namespace x86 {
      * Returns current branch direction (thread-safe)
      * @return current branch direction
      */
-    [[gnu::always_inline]] static inline auto get() noexcept -> bool {
+    [[gnu::always_inline]] [[nodiscard]] static inline auto get() noexcept -> bool {
       using detail::NOP;
       asm volatile goto("0:"
         ".byte %c3,%c4,%c5,%c6,%c7 \n"
@@ -412,21 +429,20 @@ inline namespace x86 {
      * @return true
      */
     template<bool Direction, auto tag = []{}, u32 N = 0u>
-    static consteval auto set() noexcept -> bool {
+    static consteval auto set() noexcept {
       if constexpr (requires { $get(version<N>{}); }) {
         return set<Direction, tag, N + 1u>();
       } else {
-        void(new_version<N, Direction>{});
+        return new_version<N, Direction>{}, true;
       }
-      return true;
     }
 
     /**
      * Returns current branch direction
      * @return current branch direction
      */
-    template<auto tag = []{}, u32 N = 0u>
-    static consteval auto get() noexcept -> bool {
+    template<auto tag, u32 N = 0u>
+    [[nodiscard]] static consteval auto get() noexcept -> bool {
       if constexpr (requires { $get(version<N>{}); }) {
         return get<tag, N + 1u>();
       } else if constexpr (N > 0u) {
