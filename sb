@@ -10,7 +10,7 @@
 // -->
 [![Boost Licence](http://img.shields.io/badge/license-boost-blue.svg)](http://www.boost.org/LICENSE_1_0.txt)
 [![Version](https://badge.fury.io/gh/boost-ext%2Fsb.svg)](https://github.com/boost-ext/sb/releases)
-[![build](https://img.shields.io/badge/build-blue.svg)](https://godbolt.org/z/xK6qrc3W8)
+[![build](https://img.shields.io/badge/build-blue.svg)](https://godbolt.org/z/qaYfz95KM)
 [![Try it online](https://img.shields.io/badge/try%20it-online-blue.svg)](https://godbolt.org/z/797WeYYGK)
 
 ---------------------------------------
@@ -37,7 +37,7 @@
 
 ### Requirements
 
-- C++20 ([clang++15+, g++10+](https://godbolt.org/z/xK6qrc3W8)) / [x86-64](https://en.wikipedia.org/wiki/X86-64) / [Linux](https://en.wikipedia.org/wiki/Linux)
+- C++20 ([clang++15+, g++10+](https://en.cppreference.com/w/cpp/compiler_support)) / [x86-64](https://en.wikipedia.org/wiki/X86-64) / [Linux](https://en.wikipedia.org/wiki/Linux)
 
 ---
 
@@ -329,7 +329,7 @@ struct fixed_string {
   }
   [[nodiscard]] consteval auto size() const noexcept { return N; }
   [[nodiscard]] consteval auto hash() const noexcept -> u32 {
-    constexpr u32 FNV_OFFSET = 2166136261u;
+    constexpr u32 FNV_OFFSET = 216613626u;
     constexpr u32 FNV_32_PRIME = 16777619u;
     u32 hash = FNV_OFFSET;
     for (auto i = 0u; i < N; ++i) {
