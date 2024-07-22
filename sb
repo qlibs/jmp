@@ -101,11 +101,6 @@ main:
 ```
 
 ```cpp
-/// Note: `sm` will change branches which will be inlined and/or not.
-[[gnu::noinline]] void fun();
-```
-
-```cpp
 perf results
 ```
 
