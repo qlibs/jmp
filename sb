@@ -175,7 +175,7 @@ struct const_branch {
    * @return true
    */
   template<bool Direction>
-  static consteval auto set() -> bool;
+  static consteval auto set() noexcept -> bool;
 
   /**
    * Returns current branch direction
@@ -412,7 +412,7 @@ inline namespace x86 {
      * @return true
      */
     template<bool Direction, auto tag = []{}, u32 N = 0u>
-    static consteval auto set() -> bool {
+    static consteval auto set() noexcept -> bool {
       if constexpr (requires { $get(version<N>{}); }) {
         return set<Direction, tag, N + 1u>();
       } else {
