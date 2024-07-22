@@ -21,11 +21,14 @@
 
 ### Use cases
 
-> When performance matters (smaller overhead than conditional code) and
-  in case when branches are not changing too often and/or
-  are expensive to compute/access and
-  are hard to learn by the hardware predictor due to the random nature.
-  For example: logging, tracing, configuration, ...
+When performance matters
+
+- and branches are known at compile-time
+- or branches are not changing often at run-time
+    - and branches are expensive to compute/access
+    - and branches are hard to learn by the hardware predictor due to their random nature
+
+> Examples: logging, tracing, configuration, ...
 
 ### Features
 
@@ -44,6 +47,13 @@
 ### Overview (https://godbolt.org/z/Wdqfrj7ac)
 
 ```cpp
+/**
+ * Note: sm supports branches inside inline/noinline/constexpr/... functions.
+ * constexpr void fun();
+ * inline void fun();
+ * [[gnu::noinline]] void fun()
+ * [[gnu::always_inline]] void fun()
+ */
 void fun() {
   if (sb::static_branch<"my branch">::get()) {
     std::puts("taken");
@@ -92,7 +102,39 @@ main:
 ```
 
 ```cpp
+/// Note: `sm` will change branches which will be inlined and/or not.
+[[gnu::noinline]] void fun();
+```
+
+```cpp
 show perf results
+```
+
+---
+
+```cpp
+void fun() {
+  // contant evaluation
+  if constexpr (sb::static_branch<"my branch">::get()) {
+    std::puts("taken");
+  } else {
+    std::puts("not taken");
+  }
+}
+
+int main() {
+  fun(); // not taken
+
+  sb::static_branch<"my branch">::set(true);
+  fun(); // taken
+
+  sb::static_branch<"my branch">::set(false);
+  fun(); // not taken
+}
+```
+
+```cpp
+main:
 ```
 
 ---
