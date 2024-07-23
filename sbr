@@ -164,7 +164,7 @@ struct static_branch {
    * Updates branch direction (not thread-safe)
    * @tparam protect_policy policy (default: protect)
    * @param direction new branch direction
-   * @return true on success, false otherwise
+   * @return true (always)
    */
   template<auto protect_policy = protect>
   static constexpr auto set(const bool direction) noexcept -> bool;
@@ -305,6 +305,8 @@ struct const_branch {
 #define SBR 1'0'1 // SemVer
 #pragma GCC system_header
 
+#include <bit>        // std::bit_cast
+#include <array>      // std::array
 #include <cstring>    // std::memcpy
 #include <unistd.h>   // PAGESIZE
 #include <sys/mman.h> // mprotect
@@ -314,7 +316,6 @@ using u8  = __UINT8_TYPE__;
 using u16 = __UINT16_TYPE__;
 using u32 = __UINT32_TYPE__;
 using u64 = __UINT64_TYPE__;
-struct entry { u64 id{}; u64 code{}; u64 offset{}; u64 state{}; };
 template<class T, u32 N>
 struct fixed_string {
   consteval explicit(false) fixed_string(const T (&str)[N]) noexcept {
@@ -334,35 +335,32 @@ struct fixed_string {
   T data[N]{};
 };
 template<class T, u32 N> fixed_string(const T (&str)[N]) -> fixed_string<T, N>;
+struct entry { u64 id{}; u64 code{}; u64 offset{}; };
 } // sb
-extern sbr::entry __start___sb [[gnu::section("__sb")]];
-extern sbr::entry __stop___sb [[gnu::section("__sb")]];
+extern sbr::entry __start___sbr [[gnu::section("__sbr")]];
+extern sbr::entry __stop___sbr [[gnu::section("__sbr")]];
 namespace sbr::inline v1_0_1 {
 inline namespace x86 {
   namespace detail {
-  static constexpr u8 JMP[]{0xe9}; // https://www.felixcloutier.com/x86/jmp
-  static constexpr u8 NOP[]{0x0f, 0x1f, 0x44, 0x00, 0x00}; // https://www.felixcloutier.com/x86/nop
-  static constexpr void (*copy[])(const entry*){
-    [](const auto* entry) { std::memcpy(reinterpret_cast<void*>(entry->code), &NOP, sizeof(NOP)); },
-    [](const auto* entry) {
-      struct [[gnu::packed]] { u8 op; u32 offset; } jmp{.op = JMP[0], .offset = static_cast<u32>(entry->offset)};
-      static_assert(sizeof(jmp) == sizeof(NOP));
-      std::memcpy(reinterpret_cast<void*>(entry->code), &jmp, sizeof(jmp));
-    }
-  };
+    constexpr u8 NOP[]{0x0f, 0x1f, 0x44, 0x00, 0x00}; // https://www.felixcloutier.com/x86/nop
+    struct [[gnu::packed]] JMP { u8 op{0xe9}; u32 offset; }; // https://www.felixcloutier.com/x86/jmp
+    static_assert(sizeof(JMP) == sizeof(NOP));
+    static const auto ops = [] {
+      const auto page_size = sysconf(_SC_PAGESIZE);
+      for (auto* entry = &__start___sbr; entry < &__stop___sbr; ++entry) {
+        mprotect(std::bit_cast<void*>(entry->code & ~(page_size - 1u)), sizeof(detail::NOP), PROT_READ | PROT_WRITE | PROT_EXEC);
+      }
+      std::array<std::array<u8, sizeof(NOP)>, 2u> ops;
+      std::memcpy(ops[0].data(), &NOP, sizeof(NOP));
+      const JMP jmp{.offset = static_cast<u32>(__start___sbr.offset)};
+      std::memcpy(ops[1].data(), &jmp, sizeof(JMP));
+      return ops;
+    }();
   } // detail
-
-  static constexpr auto protect = [](entry* entry, u32 size, u32 permissions = PROT_READ | PROT_WRITE | PROT_EXEC) {
-    if (static thread_local const auto page_size = sysconf(_SC_PAGESIZE); entry->state != permissions and
-      mprotect(reinterpret_cast<void*>(entry->code & ~(page_size - 1u)), size, permissions)) {
-      return false;
-    }
-    entry->state = permissions;
-    return true;
-  };
 
   /**
    * Minimal overhead named run-time branch (default: not set)
+   * @return true (always)
    * @tparam name branch name, ex. static_branch<"branch">
    */
   template<fixed_string Name>
@@ -371,16 +369,14 @@ inline namespace x86 {
 
     /**
      * Updates branch direction (not thread-safe)
-     * @tparam protect_policy policy (default: protect)
+     * Note: There might be multiple inlined versions / [[noinline]] can be used to ensure a single entry
      * @param direction new branch direction
-     * @return true on success, false otherwise
      */
-    template<auto protect_policy = protect>
     static constexpr auto set(const bool direction) noexcept -> bool {
-      for (entry* entry = &__start___sb; entry < &__stop___sb; ++entry) {
+      // TODO precompute entry list, should be 1 if noinline
+      for (auto* entry = &__start___sbr; entry < &__stop___sbr; ++entry) {
         if (entry->id != id) continue;
-        if (not protect_policy(entry, sizeof(detail::NOP))) return false;
-        detail::copy[direction](entry);
+        std::memcpy(std::bit_cast<void*>(entry->code), &detail::ops[direction], sizeof(detail::ops[direction]));
       }
       return true;
     }
@@ -393,9 +389,9 @@ inline namespace x86 {
       using detail::NOP;
       asm volatile goto("0:"
         ".byte %c3,%c4,%c5,%c6,%c7 \n"
-        ".pushsection __sb, \"aw\" \n"
+        ".pushsection __sbr, \"aw\" \n"
         ".balign %c0 \n"
-        ".quad %c1, 0b, %l[true_] - (0b + %c2), 0 \n"
+        ".quad %c1, 0b, %l[true_] - (0b + %c2) \n"
         ".popsection \n"
         : : "i"(alignof(u64)),
             "i"(id),
@@ -420,15 +416,16 @@ inline namespace x86 {
     /**
      * Updates branch direction
      * @param direction new branch direction
-     * @return true
+     * @return true (always)
      */
     template<bool Direction, auto tag = []{}, u32 N = 0u>
-    static consteval auto set() noexcept {
+    static consteval auto set() noexcept -> bool {
       if constexpr (requires { $get(version<N>{}); }) {
-        return set<Direction, tag, N + 1u>();
+        set<Direction, tag, N + 1u>();
       } else {
-        return new_version<N, Direction>{}, true;
+        new_version<N, Direction>{};
       }
+      return true;
     }
 
     /**
