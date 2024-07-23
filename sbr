@@ -162,11 +162,9 @@ struct static_branch {
 
   /**
    * Updates branch direction (not thread-safe)
-   * @tparam protect_policy policy (default: protect)
    * @param direction new branch direction
    * @return true (always)
    */
-  template<auto protect_policy = protect>
   static constexpr auto set(const bool direction) noexcept -> bool;
 
   /**
