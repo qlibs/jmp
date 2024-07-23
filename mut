@@ -108,6 +108,49 @@ main: // $CXX -O3
 .L.str.2: .asciz "not taken"
 ```
 
+> `unsafe` (https://godbolt.org/z/E3j5o3j7P)
+
+```cpp
+constexpr mut::static_bool semi_runtime_branch = false;
+
+[[gnu::noinline]] void fun() { // noinlnie is required to use unsafe!
+  if (semi_runtime_branch) {
+    std::puts("taken");
+  } else {
+    std::puts("not taken");
+  }
+}
+
+int main() {
+  semi_runtime_branch = mut::unsafe{true};
+  fun(); // taken
+}
+```
+
+```sh
+fun():
+  lea rdi, [rip + .L.str.1]
+  nop
+  lea rdi, [rip + .L.str.2]
+  jmp  puts@PLT
+
+main:
+  # semi_run_time_branch = true
+  push  rax
+  mov   rax, qword ptr [rip + __start___mut@GOTPCREL]
+  mov   rax, qword ptr [rax + 8]
+  movzx ecx, byte ptr [rip + mut::v2_0_0::x86::detail::ops+9]
+  mov   byte ptr [rax + 4], cl
+  mov   ecx, dword ptr [rip + mut::v2_0_0::x86::detail::ops+5]
+  mov   dword ptr [rax], ecx
+
+  # fun()
+  call  fun() # taken
+  xor   eax, eax
+  pop   rcx
+  ret
+```
+
 ---
 
 ### API
