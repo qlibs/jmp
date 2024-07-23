@@ -10,12 +10,12 @@
 // -->
 [![Boost Licence](http://img.shields.io/badge/license-boost-blue.svg)](http://www.boost.org/LICENSE_1_0.txt)
 [![Version](https://badge.fury.io/gh/boost-ext%2Fmut.svg)](https://github.com/boost-ext/mut/releases)
-[![build](https://img.shields.io/badge/build-blue.svg)](https://godbolt.org/z/za1s7er9o)
-[![Try it online](https://img.shields.io/badge/try%20it-online-blue.svg)](https://godbolt.org/z/G473zqE91)
+[![build](https://img.shields.io/badge/build-blue.svg)](https://godbolt.org/z/ohMbaMY9c)
+[![Try it online](https://img.shields.io/badge/try%20it-online-blue.svg)](https://godbolt.org/z/hn3EYn9r5)
 
 ---------------------------------------
 
-## Static/Const branch library
+## Static branch/dispatch library
 
 > https://en.wikipedia.org/wiki/Branch_(computer_science)
 
@@ -43,7 +43,7 @@
 
 ### Overview
 
-> `static_bool` (https://godbolt.org/z/G473zqE91)
+> `static_bool` (https://godbolt.org/z/hn3EYn9r5)
 
 ```cpp
 /**
@@ -113,6 +113,44 @@ main: // $CXX -O3
 ### API
 
 ```cpp
+/**
+ * [unsafe] Only changes single entry (assumes all calls are inlined)
+ */
+struct unsafe final {
+  bool direction{};
+  constexpr operator bool() const { return direction; }
+};
+```
+
+```cpp
+/**
+ * Minimal overhead static bool
+ * @return true (always)
+ */
+template<auto Id = +[]{}>
+struct static_bool final {
+  constexpr explicit(false) static_bool(const bool) noexcept;
+
+  /**
+   * Updates branch direction
+   * Note: Assumes branch might be inlined
+   * @param direction new branch direction
+   */
+  constexpr void operator=(const bool direction) const noexcept;
+
+  /**
+   * Updates branch direction (unsafe)
+   * Note: Assumes the branch is not inlined
+   * @param direction new branch direction
+   */
+  constexpr void operator=(const unsafe direction) const noexcept;
+
+  /**
+   * Returns branch direction
+   * @return current branch direction
+   */
+  [[gnu::always_inline]] [[nodiscard]] constexpr operator bool() const noexcept;
+};
 ```
 
 > Configuration
@@ -251,6 +289,9 @@ static const auto ops = [] {
 }();
 } // detail
 
+/**
+ * [unsafe] Only changes single entry (assumes all calls are inlined)
+ */
 struct unsafe final {
   bool direction{};
   constexpr operator bool() const { return direction; }
