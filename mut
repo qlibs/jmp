@@ -49,7 +49,7 @@
 /**
  * constexpr minimal overhead static bool changed at run-time via code patching
  */
-constexpr mut::static_bool semi_run_time_branch = false;
+constexpr mut::static_bool semi_runtime_branch = false;
 
 /**
  * Note: `fun` can be inline/noinline/constexpr/etc.
@@ -59,7 +59,7 @@ constexpr mut::static_bool semi_run_time_branch = false;
  * [[gnu::always_inline]] void fun()
  */
 void fun() {
-  if (semi_run_time_branch) {
+  if (semi_runtime_branch) {
     std::puts("taken");
   } else {
     std::puts("not taken");
@@ -69,10 +69,10 @@ void fun() {
 int main() {
   fun(); // not taken
 
-  semi_run_time_branch = true;
+  semi_runtime_branch = true;
   fun(); // taken
 
-  semi_run_time_branch = false;
+  semi_runtime_branch = false;
   fun(); // not taken
 }
 ```
@@ -85,7 +85,7 @@ main: // $CXX -O3
  .Ltmp1:
   call puts@PLT # not taken
 
-  call semi_run_time_branch(true)
+  call semi_runtime_branch(true)
 
   lea rdi, [rip + .L.str.1]
   jmp .Ltmp2 # code patching (nop->jmp)
@@ -93,7 +93,7 @@ main: // $CXX -O3
  .Ltmp2:
   call puts@PLT # taken
 
-  call semi_run_time_branch(false)
+  call semi_runtime_branch(false)
 
   lea rdi, [rip + .L.str.1]
   nop # code patching (jmp->nop)
@@ -135,7 +135,7 @@ fun():
   jmp  puts@PLT
 
 main:
-  # semi_run_time_branch = true
+  # semi_runtime_branch = true
   push  rax
   mov   rax, qword ptr [rip + __start___mut@GOTPCREL]
   mov   rax, qword ptr [rax + 8]
