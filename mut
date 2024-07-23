@@ -93,7 +93,7 @@ main: // $CXX -O3
  .Ltmp2:
   call puts@PLT # taken
 
-  call semi_runtime_branch.operator(false)
+  call semi_runtime_branch.operator=(false)
 
   lea rdi, [rip + .L.str.1]
   nop # code patching (jmp->nop)
