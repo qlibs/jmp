@@ -130,7 +130,7 @@ int main() {
 ```sh
 fun():
   lea rdi, [rip + .L.str.1]
-  nop
+  nop # code patching (nop->jmp)
   lea rdi, [rip + .L.str.2]
   jmp  puts@PLT
 
