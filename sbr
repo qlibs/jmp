@@ -9,7 +9,7 @@
 #ifdef README
 // -->
 [![Boost Licence](http://img.shields.io/badge/license-boost-blue.svg)](http://www.boost.org/LICENSE_1_0.txt)
-[![Version](https://badge.fury.io/gh/boost-ext%2Fsb.svg)](https://github.com/boost-ext/sb/releases)
+[![Version](https://badge.fury.io/gh/boost-ext%2Fsbr.svg)](https://github.com/boost-ext/sbr/releases)
 [![build](https://img.shields.io/badge/build-blue.svg)](https://godbolt.org/z/zj85z5W7T)
 [![Try it online](https://img.shields.io/badge/try%20it-online-blue.svg)](https://godbolt.org/z/797WeYYGK)
 
@@ -31,7 +31,7 @@
 
 ### Features
 
-- Single header (https://raw.githubusercontent.com/boost-ext/sb/main/sb - for integration see [FAQ](#faq))
+- Single header (https://raw.githubusercontent.com/boost-ext/sbr/main/sbr - for integration see [FAQ](#faq))
 - Minimal [API](#api)
 - Verifies itself upon include (can be disabled with `-DNTEST` - see [FAQ](#faq))
 
@@ -54,7 +54,7 @@
  * [[gnu::always_inline]] void fun()
  */
 void fun() {
-  if (sb::static_branch<"semi run-time branch">::get()) {
+  if (sbr::static_branch<"semi run-time branch">::get()) {
     std::puts("taken");
   } else {
     std::puts("not taken");
@@ -64,10 +64,10 @@ void fun() {
 int main() {
   fun(); // not taken
 
-  sb::static_branch<"semi run-time branch">::set(true);
+  sbr::static_branch<"semi run-time branch">::set(true);
   fun(); // taken
 
-  sb::static_branch<"semi run-time branch">::set(false);
+  sbr::static_branch<"semi run-time branch">::set(false);
   fun(); // not taken
 }
 ```
@@ -110,7 +110,7 @@ main: // $CXX -O3
 ```cpp
 template<auto tag = []{}> // Note: `tag` is required to delay `fun` instantiation
 auto fun() {
-  if constexpr (sb::const_branch<"compile-time branch">::get<tag>()) {
+  if constexpr (sbr::const_branch<"compile-time branch">::get<tag>()) {
     std::puts("taken");
   } else {
     std::puts("not taken");
@@ -120,10 +120,10 @@ auto fun() {
 int main() {
   fun(); // not taken
 
-  static_assert(sb::const_branch<"compile-time branch">::set<true>());
+  static_assert(sbr::const_branch<"compile-time branch">::set<true>());
   fun(); // taken
 
-  static_assert(sb::const_branch<"compile-time branch">::set<false>());
+  static_assert(sbr::const_branch<"compile-time branch">::set<false>());
   fun(); // not taken
 }
 ```
@@ -204,7 +204,7 @@ struct const_branch {
 > Configuration
 
 ```cpp
-#define SB 1'0'0 // Current library version (SemVer)
+#define SBR 1'0'0 // Current library version (SemVer)
 ```
 
 ---
@@ -213,15 +213,15 @@ struct const_branch {
 
 - How does it work?
 
-  > `sb` is using technique called code patching - which basically means that the code modifies itself.
+  > `sbr` is using technique called code patching - which basically means that the code modifies itself.
 
   `static_branch` is based on https://docs.kernel.org/staging/static-keys.html and it requires `asm goto` support (gcc, clang).
-  `sb` currently supports x86-64 Linux, but other platforms can be added using the same technique.
+  `sbr` currently supports x86-64 Linux, but other platforms can be added using the same technique.
 
   Example:
 
     ```cpp
-    if (sb::static_branch<"how does it work?">::get()) {
+    if (sbr::static_branch<"how does it work?">::get()) {
       return 42;
     } else {
       return 0;
@@ -252,9 +252,9 @@ struct const_branch {
   now, if we change the branch direction (at run-time / before or after the branch)...
 
     ```cpp
-    sb::static_branch<"how does it work?">::set(true);
+    sbr::static_branch<"how does it work?">::set(true);
 
-    if (sb::static_branch<"how does it work?">::get()) {
+    if (sbr::static_branch<"how does it work?">::get()) {
       return 42;
     } else {
       return 0;
@@ -266,7 +266,7 @@ struct const_branch {
     ```cpp
     main:
       # relatively slow, it will 'code patch' the new branch direction
-      call sb::static_branch<"how does it work?">::set(true); # nop->jmp or jmp->nop
+      call sbr::static_branch<"how does it work?">::set(true); # nop->jmp or jmp->nop
 
       jmp .LBB1: (nop->jmp - changed in the memory of the program via `set(true)` call)
       xor eax, eax # return 0
@@ -288,11 +288,11 @@ struct const_branch {
     )
     add_library(mp INTERFACE)
     target_include_directories(mp SYSTEM INTERFACE ${mp_SOURCE_DIR})
-    add_library(sb::sb ALIAS sb)
+    add_library(sbr::sb ALIAS sb)
     ```
 
     ```
-    target_link_libraries(${PROJECT_NAME} sb::sb);
+    target_link_libraries(${PROJECT_NAME} sbr::sb);
     ```
 
 - Acknowledgments
@@ -301,15 +301,15 @@ struct const_branch {
 
 <!--
 #else
-#ifndef SB
-#define SB 1'0'0 // SemVer
+#ifndef SBR
+#define SBR 1'0'0 // SemVer
 #pragma GCC system_header
 
 #include <cstring>    // std::memcpy
 #include <unistd.h>   // PAGESIZE
 #include <sys/mman.h> // mprotect
 
-namespace sb::inline v1_0_0 {
+namespace sbr::inline v1_0_0 {
 using u8  = __UINT8_TYPE__;
 using u16 = __UINT16_TYPE__;
 using u32 = __UINT32_TYPE__;
@@ -335,9 +335,9 @@ struct fixed_string {
 };
 template<class T, u32 N> fixed_string(const T (&str)[N]) -> fixed_string<T, N>;
 } // sb
-extern sb::entry __start___sb [[gnu::section("__sb")]];
-extern sb::entry __stop___sb [[gnu::section("__sb")]];
-namespace sb::inline v1_0_0 {
+extern sbr::entry __start___sb [[gnu::section("__sb")]];
+extern sbr::entry __stop___sb [[gnu::section("__sb")]];
+namespace sbr::inline v1_0_0 {
 inline namespace x86 {
   namespace detail {
   static constexpr u8 JMP[]{0xe9}; // https://www.felixcloutier.com/x86/jmp
@@ -451,30 +451,30 @@ inline namespace x86 {
 
 #ifndef NTEST
 static_assert(([] {
-  // sb::fixed_string
+  // sbr::fixed_string
   {
-    static_assert(sizeof("") == sb::fixed_string{""}.size());
-    static_assert(sizeof("x86") == sb::fixed_string{"x86"}.size());
-    static_assert(sizeof("arm64") != sb::fixed_string{"x86"}.size());
-    static_assert(sb::fixed_string{"x86"}.hash() == sb::fixed_string{"x86"}.hash());
-    static_assert(sb::fixed_string{"arm64"}.hash() != sb::fixed_string{"x86"}.hash());
+    static_assert(sizeof("") == sbr::fixed_string{""}.size());
+    static_assert(sizeof("x86") == sbr::fixed_string{"x86"}.size());
+    static_assert(sizeof("arm64") != sbr::fixed_string{"x86"}.size());
+    static_assert(sbr::fixed_string{"x86"}.hash() == sbr::fixed_string{"x86"}.hash());
+    static_assert(sbr::fixed_string{"arm64"}.hash() != sbr::fixed_string{"x86"}.hash());
   }
 
-  // sb::static_branch
+  // sbr::static_branch
   {
-    static_assert(sb::static_branch<"::sb::x86">::id == sb::static_branch<"::sb::x86">::id);
-    static_assert(sb::static_branch<"::sb::arm64">::id != sb::static_branch<"::sb::x86">::id);
+    static_assert(sbr::static_branch<"::sbr::x86">::id == sbr::static_branch<"::sbr::x86">::id);
+    static_assert(sbr::static_branch<"::sbr::arm64">::id != sbr::static_branch<"::sbr::x86">::id);
   }
 
-  // sb::const_branch
+  // sbr::const_branch
   {
-    static_assert(not sb::const_branch<"::sb::compile-time">::get<[]{}>());
-    static_assert(sb::const_branch<"::sb::compile-time">::set<true, []{}>());
-    static_assert(sb::const_branch<"::sb::compile-time">::get<[]{}>());
-    static_assert(sb::const_branch<"::sb::compile-time">::set<false, []{}>());
-    static_assert(not sb::const_branch<"::sb::compile-time">::get<[]{}>());
+    static_assert(not sbr::const_branch<"::sbr::compile-time">::get<[]{}>());
+    static_assert(sbr::const_branch<"::sbr::compile-time">::set<true, []{}>());
+    static_assert(sbr::const_branch<"::sbr::compile-time">::get<[]{}>());
+    static_assert(sbr::const_branch<"::sbr::compile-time">::set<false, []{}>());
+    static_assert(not sbr::const_branch<"::sbr::compile-time">::get<[]{}>());
   }
 }(), true));
 #endif // NTEST
-#endif // SB
+#endif // SBR
 #endif // README
