@@ -261,7 +261,7 @@ struct static_bool final {
 
     ```cpp
     main:
-      call b.operator=(true); # nop->jmp or jmp->nop (memcpy)
+      call b.operator=(true); # nop->jmp or jmp->nop
 
       jmp .LBB1: (nop->jmp - changed in the memory of the program)
       xor eax, eax # return 0
@@ -299,7 +299,6 @@ struct static_bool final {
 #pragma GCC system_header
 
 #include <array>      // std::array
-#include <cstring>    // std::memcpy
 #include <unistd.h>   // PAGESIZE
 #include <sys/mman.h> // mprotect
 
@@ -315,20 +314,19 @@ extern "C" entry __stop___mut [[gnu::section("__mut")]];
 
 inline namespace x86 {
 namespace detail {
-constexpr u8 NOP[]{0x0f, 0x1f, 0x44, 0x00, 0x00}; // https://www.felixcloutier.com/x86/nop
-struct [[gnu::packed]] JMP { u8 op{0xe9}; u32 offset; }; // https://www.felixcloutier.com/x86/jmp
-static_assert(sizeof(JMP) == sizeof(NOP));
+using op_t = std::array<u8, 5u>;
+constexpr op_t NOP{0x0f, 0x1f, 0x44, 0x00, 0x00}; // https://www.felixcloutier.com/x86/nop
 static const auto ops = [] {
   const auto page_size = sysconf(_SC_PAGESIZE);
   for (auto* entry = &__start___mut; entry < &__stop___mut; ++entry) {
     mprotect(reinterpret_cast<void*>((u64)entry->code & ~(page_size - 1u)),
-             sizeof(detail::NOP), PROT_READ | PROT_WRITE | PROT_EXEC);
+             sizeof(NOP), PROT_READ | PROT_WRITE | PROT_EXEC);
   }
-  std::array<std::array<u8, sizeof(NOP)>, 2u> ops;
-  std::memcpy(ops[0].data(), &NOP, sizeof(NOP));
-  const JMP jmp{.offset = static_cast<u32>(__start___mut.offset)};
-  std::memcpy(ops[1].data(), &jmp, sizeof(JMP));
-  return ops;
+  struct [[gnu::packed]] { u8 op{0xe9}; u32 offset; } jmp{ // https://www.felixcloutier.com/x86/jmp
+    .offset = static_cast<u32>(__start___mut.offset)
+  };
+  static_assert(sizeof(jmp) == sizeof(NOP));
+  return std::array{NOP, op_t{*reinterpret_cast<const op_t*>(&jmp)}};
 }();
 } // detail
 
@@ -337,7 +335,7 @@ static const auto ops = [] {
  */
 struct unsafe final {
   bool direction{};
-  constexpr operator bool() const { return direction; }
+  [[nodiscard]] constexpr operator bool() const { return direction; }
 };
 
 /**
@@ -358,7 +356,7 @@ struct static_bool final {
   constexpr void operator=(const bool direction) const noexcept {
     for (auto* entry = &__start___mut; entry < &__stop___mut; ++entry) {
       if (entry->id != id) continue;
-      std::memcpy(entry->code, &detail::ops[direction], sizeof(detail::ops[direction]));
+      *static_cast<detail::op_t*>(entry->code) = detail::ops[direction];
     }
   }
 
@@ -368,7 +366,7 @@ struct static_bool final {
    * @param direction new branch direction
    */
   constexpr void operator=(const unsafe direction) const noexcept {
-    std::memcpy(__start___mut.code, detail::ops[direction].data(), sizeof(detail::ops[direction]));
+    *static_cast<detail::op_t*>(__start___mut.code) = detail::ops[direction];
   }
 
   /**
