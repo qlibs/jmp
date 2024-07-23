@@ -10,8 +10,8 @@
 // -->
 [![Boost Licence](http://img.shields.io/badge/license-boost-blue.svg)](http://www.boost.org/LICENSE_1_0.txt)
 [![Version](https://badge.fury.io/gh/boost-ext%2Fsbr.svg)](https://github.com/boost-ext/sbr/releases)
-[![build](https://img.shields.io/badge/build-blue.svg)](https://godbolt.org/z/zj85z5W7T)
-[![Try it online](https://img.shields.io/badge/try%20it-online-blue.svg)](https://godbolt.org/z/797WeYYGK)
+[![build](https://img.shields.io/badge/build-blue.svg)](https://godbolt.org/z/v3aj66ab5)
+[![Try it online](https://img.shields.io/badge/try%20it-online-blue.svg)](https://godbolt.org/z/G473zqE91)
 
 ---------------------------------------
 
@@ -43,7 +43,7 @@
 
 ### Overview
 
-> `static_branch` - Minimal overhead (nop/jmp) run-time branch (https://godbolt.org/z/797WeYYGK)
+> `static_branch` - Minimal overhead run-time branch (https://godbolt.org/z/G473zqE91)
 
 ```cpp
 /**
@@ -105,7 +105,7 @@ main: // $CXX -O3
 
 ---
 
-> `const_branch` - Zero overhead compile-time branch (https://godbolt.org/z/xEboP8WYe)
+> `const_branch` - Zero overhead compile-time branch (https://godbolt.org/z/Kb9oqnef6)
 
 ```cpp
 template<auto tag = []{}> // Note: `tag` is required to delay `fun` instantiation
