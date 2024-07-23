@@ -1,0 +1,331 @@
+// <!--
+//
+// Copyright (c) 2024 Kris Jusiak (kris at jusiak dot net)
+//
+// Distributed under the Boost Software License, Version 1.0.
+// (See accompanying file LICENSE_1_0.txt or copy at
+// http://www.boost.org/LICENSE_1_0.txt)
+//
+#ifdef README
+// -->
+[![Boost Licence](http://img.shields.io/badge/license-boost-blue.svg)](http://www.boost.org/LICENSE_1_0.txt)
+[![Version](https://badge.fury.io/gh/boost-ext%2Fmut.svg)](https://github.com/boost-ext/mut/releases)
+[![build](https://img.shields.io/badge/build-blue.svg)](https://godbolt.org/z/za1s7er9o)
+[![Try it online](https://img.shields.io/badge/try%20it-online-blue.svg)](https://godbolt.org/z/G473zqE91)
+
+---------------------------------------
+
+## Static/Const branch library
+
+> https://en.wikipedia.org/wiki/Branch_(computer_science)
+
+### Use cases
+
+> When performance matters
+  - `and` branches are known at compile-time
+  - `or` branches are not changing often at run-time
+      - `and/or` branches are expensive to compute/require memory access
+      - `and/or` branches are hard to learn by the hardware branch predictor due to their random nature
+
+> Examples: logging, tracing, configuration, algo, ...
+
+### Features
+
+- Single header (https://raw.githubusercontent.com/boost-ext/mut/main/mut - for integration see [FAQ](#faq))
+- Minimal [API](#api)
+- Verifies itself upon include (can be disabled with `-DNTEST` - see [FAQ](#faq))
+
+### Requirements
+
+- C++20 ([clang++15+, g++11+](https://en.cppreference.com/w/cpp/compiler_support)) / [x86-64](https://en.wikipedia.org/wiki/X86-64) / [Linux](https://en.wikipedia.org/wiki/Linux)
+
+---
+
+### Overview
+
+> `static_bool` (https://godbolt.org/z/G473zqE91)
+
+```cpp
+/**
+ * constexpr minimal overhead static bool changed at run-time via code patching
+ */
+constexpr mut::static_bool semi_run_time_branch = false;
+
+/**
+ * Note: `fun` can be inline/noinline/constexpr/etc.
+ * constexpr void fun();
+ * inline void fun();
+ * [[gnu::noinline]] void fun()
+ * [[gnu::always_inline]] void fun()
+ */
+void fun() {
+  if (semi_run_time_branch) {
+    std::puts("taken");
+  } else {
+    std::puts("not taken");
+  }
+}
+
+int main() {
+  fun(); // not taken
+
+  semi_run_time_branch = true;
+  fun(); // taken
+
+  semi_run_time_branch = false;
+  fun(); // not taken
+}
+```
+
+```cpp
+main: // $CXX -O3
+  lea rdi, [rip + .L.str.1]
+  nop # code patching (nop->nop)
+  lea rdi, [rip + .L.str.2]
+ .Ltmp1:
+  call puts@PLT # not taken
+
+  call semi_run_time_branch(true)
+
+  lea rdi, [rip + .L.str.1]
+  jmp .Ltmp2 # code patching (nop->jmp)
+  lea rdi, [rip + .L.str.2]
+ .Ltmp2:
+  call puts@PLT # taken
+
+  call semi_run_time_branch(false)
+
+  lea rdi, [rip + .L.str.1]
+  nop # code patching (jmp->nop)
+  lea rdi, [rip + .L.str.2]
+ .Ltmp3:
+  call puts@PLT # not taken
+
+  xor  eax, eax # return 0
+  ret
+
+.L.str.1: .asciz "taken"
+.L.str.2: .asciz "not taken"
+```
+
+---
+
+### API
+
+```cpp
+```
+
+> Configuration
+
+```cpp
+#define MUT 2'0'0 // Current library version (SemVer)
+```
+
+---
+
+### FAQ
+
+- How does it work?
+
+  > `mut` is using technique called code patching - which basically means that the code modifies itself.
+
+  `static_bool` is based on https://docs.kernel.org/staging/static-keys.html and it requires `asm goto` support (gcc, clang).
+  `mut` currently supports x86-64 Linux, but other platforms can be added using the same technique.
+
+  Example:
+
+    ```cpp
+    constexpr mut::static_bool b = false;
+    if (b) {
+      return 42;
+    } else {
+      return 0;
+    }
+    ```
+
+  it will emit...
+
+    ```cpp
+    main:
+      .byte 15 31 68 0 0 # nop - https://www.felixcloutier.com/x86/nop
+      xor eax, eax # return 0
+      ret
+    .LBB1:
+      mov eax, 42 # return 42
+      ret
+    ```
+
+  which will effectively execute...
+
+    ```cpp
+    main:
+      nop
+      xor eax, eax # return 0
+      ret
+    ```
+
+  now, if we change the branch direction at run-time...
+
+    ```cpp
+    b = true;
+
+    if (b) {
+      return 42;
+    } else {
+      return 0;
+    }
+    ```
+
+  it will emit...
+
+    ```cpp
+    main:
+      call b.operator=(true); # nop->jmp or jmp->nop (memcpy)
+
+      jmp .LBB1: (nop->jmp - changed in the memory of the program)
+      xor eax, eax # return 0
+      ret
+    .LBB1:
+      mov eax, 42 # return 42
+      ret
+    ```
+
+- How to integrate with CMake/CPM?
+
+    ```
+    CPMAddPackage(
+      Name mut
+      GITHUB_REPOSITORY boost-ext/mut
+      GIT_TAG v2.0.0
+    )
+    add_library(mp INTERFACE)
+    target_include_directories(mp SYSTEM INTERFACE ${mp_SOURCE_DIR})
+    add_library(mut::mut ALIAS mut)
+    ```
+
+    ```
+    target_link_libraries(${PROJECT_NAME} mut:mut)
+    ```
+
+- Acknowledgments
+
+  > https://docs.kernel.org/staging/static-keys.html, https://www.intel.com/content/www/us/en/developer/articles/technical/intel-sdm.html, https://www.agner.org/optimize/instruction_tables.pdf, https://gcc.gnu.org/onlinedocs/gcc/Extended-Asm.html, https://www.felixcloutier.com/documents/gcc-asm.html, https://www.felixcloutier.com/x86, https://uops.info/table.html, https://arxiv.org/abs/2308.14185, https://arxiv.org/pdf/2011.13127
+
+<!--
+#else
+#ifndef MUT
+#define MUT 2'0'0 // SemVer
+#pragma GCC system_header
+
+#include <array>      // std::array
+#include <cstring>    // std::memcpy
+#include <unistd.h>   // PAGESIZE
+#include <sys/mman.h> // mprotect
+
+namespace mut::inline v2_0_0 {
+using u8  = __UINT8_TYPE__;
+using u16 = __UINT16_TYPE__;
+using u32 = __UINT32_TYPE__;
+using u64 = __UINT64_TYPE__;
+
+struct entry { void (*id)(){}; void* code{}; u64 offset{}; };
+extern "C" entry __start___mut [[gnu::section("__mut")]];
+extern "C" entry __stop___mut [[gnu::section("__mut")]];
+
+inline namespace x86 {
+namespace detail {
+constexpr u8 NOP[]{0x0f, 0x1f, 0x44, 0x00, 0x00}; // https://www.felixcloutier.com/x86/nop
+struct [[gnu::packed]] JMP { u8 op{0xe9}; u32 offset; }; // https://www.felixcloutier.com/x86/jmp
+static_assert(sizeof(JMP) == sizeof(NOP));
+static const auto ops = [] {
+  const auto page_size = sysconf(_SC_PAGESIZE);
+  for (auto* entry = &__start___mut; entry < &__stop___mut; ++entry) {
+    mprotect(reinterpret_cast<void*>((u64)entry->code & ~(page_size - 1u)),
+             sizeof(detail::NOP), PROT_READ | PROT_WRITE | PROT_EXEC);
+  }
+  std::array<std::array<u8, sizeof(NOP)>, 2u> ops;
+  std::memcpy(ops[0].data(), &NOP, sizeof(NOP));
+  const JMP jmp{.offset = static_cast<u32>(__start___mut.offset)};
+  std::memcpy(ops[1].data(), &jmp, sizeof(JMP));
+  return ops;
+}();
+} // detail
+
+struct unsafe final {
+  bool direction{};
+  constexpr operator bool() const { return direction; }
+};
+
+/**
+ * Minimal overhead static bool
+ * @return true (always)
+ */
+template<auto Id = +[]{}>
+struct static_bool final {
+  static constexpr auto id = Id;
+
+  constexpr explicit(false) static_bool(const bool) noexcept { }
+
+  /**
+   * Updates branch direction
+   * Note: Assumes branch might be inlined
+   * @param direction new branch direction
+   */
+  constexpr void operator=(const bool direction) const noexcept {
+    for (auto* entry = &__start___mut; entry < &__stop___mut; ++entry) {
+      if (entry->id != id) continue;
+      std::memcpy(entry->code, &detail::ops[direction], sizeof(detail::ops[direction]));
+    }
+  }
+
+  /**
+   * Updates branch direction (unsafe)
+   * Note: Assumes the branch is not inlined
+   * @param direction new branch direction
+   */
+  constexpr void operator=(const unsafe direction) const noexcept {
+    std::memcpy(__start___mut.code, detail::ops[direction].data(), sizeof(detail::ops[direction]));
+  }
+
+  /**
+   * Returns branch direction
+   * @return current branch direction
+   */
+  [[gnu::always_inline]] [[nodiscard]] constexpr operator bool() const noexcept {
+    using detail::NOP;
+    asm volatile goto("0:"
+      ".byte %c3,%c4,%c5,%c6,%c7 \n"
+      ".pushsection __mut, \"aw\" \n"
+      ".balign %c0 \n"
+      ".quad %c1, 0b, %l[true_] - (0b + %c2) \n"
+      ".popsection \n"
+      : : "i"(alignof(u64)),
+          "i"(id),
+          "i"(sizeof(NOP)),
+          "i"(NOP[0]), "i"(NOP[1]), "i"(NOP[2]), "i"(NOP[3]), "i"(NOP[4])
+      : : true_);
+    false_: return false;
+    true_:  return true;
+  }
+};
+} // namespace x86
+} // namespace mut
+
+#ifndef NTEST
+static_assert(([] {
+  // mut::unsafe
+  {
+    static_assert(not mut::unsafe{false});
+    static_assert(mut::unsafe{true});
+  }
+
+  // mut::static_bool
+  {
+    static_assert(mut::static_bool<0>::id == mut::static_bool<0>::id);
+    static_assert(mut::static_bool<0>::id != mut::static_bool<1>::id);
+    static_assert(mut::static_bool<>::id != mut::static_bool<>::id);
+  }
+}(), true));
+#endif // NTEST
+#endif // MUT
+#endif // README
