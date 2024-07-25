@@ -21,13 +21,13 @@
 
 ### Use cases
 
-> When performance matters
-  - `and` branches are known at compile-time
-  - `or` branches are not changing often at run-time
-      - `and/or` branches are expensive to compute/require memory access
-      - `and/or` branches are hard to learn by the hardware branch predictor due to their random nature
+> Performance
 
-> Examples: logging, tracing, configuration, algo, ...
+  -          branch is relatively stable through its life cycle
+  - `and/or` branch is expensive to compute and/or require memory access
+  - `and/or` branch is hard to predict/learn by the hardware
+
+> Examples: logging, tracing, dispatching, ...
 
 ### Features
 
