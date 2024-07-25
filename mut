@@ -10,8 +10,8 @@
 // -->
 [![Boost Licence](http://img.shields.io/badge/license-boost-blue.svg)](http://www.boost.org/LICENSE_1_0.txt)
 [![Version](https://badge.fury.io/gh/boost-ext%2Fmut.svg)](https://github.com/boost-ext/mut/releases)
-[![build](https://img.shields.io/badge/build-blue.svg)](https://godbolt.org/z/ohMbaMY9c)
-[![Try it online](https://img.shields.io/badge/try%20it-online-blue.svg)](https://godbolt.org/z/hn3EYn9r5)
+[![build](https://img.shields.io/badge/build-blue.svg)](https://godbolt.org/z/47hh3Yjoj)
+[![Try it online](https://img.shields.io/badge/try%20it-online-blue.svg)](https://godbolt.org/z/fz5zd1cM9)
 
 ---------------------------------------
 
@@ -43,7 +43,7 @@
 
 ### Overview
 
-> `static_bool` (https://godbolt.org/z/hn3EYn9r5)
+> `static_bool` (https://godbolt.org/z/fz5zd1cM9)
 
 ```cpp
 /**
