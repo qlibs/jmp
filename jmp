@@ -9,13 +9,13 @@
 #ifdef README
 // -->
 [![Boost Licence](http://img.shields.io/badge/license-boost-blue.svg)](http://www.boost.org/LICENSE_1_0.txt)
-[![Version](https://badge.fury.io/gh/boost-ext%2Fmut.svg)](https://github.com/boost-ext/mut/releases)
-[![build](https://img.shields.io/badge/build-blue.svg)](https://godbolt.org/z/33T6jj9rY)
-[![Try it online](https://img.shields.io/badge/try%20it-online-blue.svg)](https://godbolt.org/z/fz5zd1cM9)
+[![Version](https://badge.fury.io/gh/qlibs%2Fjmp.svg)](https://github.com/qlibs/jmp/releases)
+[![build](https://img.shields.io/badge/build-blue.svg)](https://godbolt.org/z/hbTrc4n13)
+[![Try it online](https://img.shields.io/badge/try%20it-online-blue.svg)](https://godbolt.org/z/PGvseqsaf)
 
 ---------------------------------------
 
-## Mut: Static mutable branches library
+## jmp: Static branch library
 
 > https://en.wikipedia.org/wiki/Branch_(computer_science)
 
@@ -30,7 +30,7 @@
 
 ### Features
 
-- Single header (https://raw.githubusercontent.com/boost-ext/mut/main/mut - for integration see [FAQ](#faq))
+- Single header (https://raw.githubusercontent.com/qlibs/jmp/main/jmp - for integration see [FAQ](#faq))
 - Minimal [API](#api)
 - Verifies itself upon include (can be disabled with `-DNTEST` - see [FAQ](#faq))
 
@@ -42,13 +42,13 @@
 
 ### Overview
 
-> `static_bool` (https://godbolt.org/z/fz5zd1cM9)
+> `conditional` (https://godbolt.org/z/aY6Yna5fs)
 
 ```cpp
 /**
  * constexpr minimal overhead static bool changed at run-time via code patching
  */
-constexpr mut::static_bool semi_runtime_branch = false;
+constexpr jmp::conditional semi_runtime_branch = false;
 
 /**
  * Note: `fun` can be inline/noinline/constexpr/etc.
@@ -66,7 +66,7 @@ void fun() {
 }
 
 int main() {
-  std::ignore = mut::static_bool::init(); // enables run-time code patching
+  std::ignore = jmp::conditional::init(); // enables run-time code patching
 
   fun(); // not taken
 
@@ -113,7 +113,7 @@ main: // $CXX -O3
 
 ### Examples
 
-> `variant` (https://godbolt.org/z/GGTPqvY3b) | (https://wg21.link/P2996)
+> `variant` (https://godbolt.org/z/j4E85oMrx) | (https://wg21.link/P2996)
 
 ```cpp
 template<class... Ts>
@@ -155,7 +155,7 @@ private:
     std::meta::data_member_spec(^Ts)...
   })));
   template<class...> static constexpr auto false_v = false;
-  static constexpr std::array options{mut::static_bool{false_v<Ts>}...};
+  static constexpr std::array options{jmp::conditional{false_v<Ts>}...};
   storage storage_{.empty={}};
 };
 ```
@@ -170,7 +170,7 @@ void usage(const variant<bool, int, float>& v) {
 }
 
 int main() {
-  std::ignore = mut::static_bool::init();
+  std::ignore = jmp::conditional::init();
 
   variant<bool, int, float> v{};
 
@@ -208,19 +208,19 @@ usage(variant<bool, int, float> const&):
 /**
  * Minimal overhead (via code patching) static bool
  */
-class static_bool final {
+class conditional final {
  public:
   /**
-   * Creates empty class (static_assert(sizeof(static_bool) == 1u))
+   * Creates empty class (static_assert(sizeof(conditional) == 1u))
    * @param direction initial branch direction
    * Note: direction should be false by default
    *       for better performance: { false: nop, true: unconditional jmp }
    */
-  constexpr explicit(false) static_bool(const auto direction) noexcept;
-  constexpr static_bool(const static_bool&) noexcept = delete;
-  constexpr static_bool(static_bool&&) noexcept = delete;
-  constexpr auto operator=(const static_bool&) noexcept = delete;
-  constexpr auto operator=(static_bool&&) noexcept = delete;
+  constexpr explicit(false) conditional(const auto direction) noexcept;
+  constexpr conditional(const static_bool&) noexcept = delete;
+  constexpr conditional(static_bool&&) noexcept = delete;
+  constexpr auto operator=(const conditional&) noexcept = delete;
+  constexpr auto operator=(conditional&&) noexcept = delete;
 
   /**
    * Makes required pages writable for code patching
@@ -250,7 +250,7 @@ class static_bool final {
 > Configuration
 
 ```cpp
-#define MUT 2'1'0 // Current library version (SemVer)
+#define JMP 2'1'0 // Current library version (SemVer)
 ```
 
 ---
@@ -259,15 +259,15 @@ class static_bool final {
 
 - How does it work?
 
-  > `mut` is using technique called code patching - which basically means that the code modifies itself.
+  > `jmp` is using technique called code patching - which basically means that the code modifies itself.
 
-  `mut::static_bool` is based on https://docs.kernel.org/staging/static-keys.html and it requires `asm goto` support (gcc, clang).
-  `mut` currently supports x86-64 Linux, but other platforms can be added using the same technique.
+  `jmp::conditional` is based on https://docs.kernel.org/staging/static-keys.html and it requires `asm goto` support (gcc, clang).
+  `jmp` currently supports x86-64 Linux, but other platforms can be added using the same technique.
 
   Example:
 
     ```cpp
-    constexpr mut::static_bool b = false;
+    constexpr jmp::conditional b = false;
 
     if (b) {
       return 42;
@@ -327,17 +327,17 @@ class static_bool final {
 
     ```
     CPMAddPackage(
-      Name mut
-      GITHUB_REPOSITORY boost-ext/mut
+      Name jmp
+      GITHUB_REPOSITORY qlibs/jmp
       GIT_TAG v2.1.0
     )
     add_library(mp INTERFACE)
     target_include_directories(mp SYSTEM INTERFACE ${mp_SOURCE_DIR})
-    add_library(mut::mut ALIAS mut)
+    add_library(jmp::jmp ALIAS jmp)
     ```
 
     ```
-    target_link_libraries(${PROJECT_NAME} mut:mut)
+    target_link_libraries(${PROJECT_NAME} jmp:jmp)
     ```
 
 - Acknowledgments
@@ -346,13 +346,13 @@ class static_bool final {
 
 <!--
 #else
-#ifndef MUT
-#define MUT 2'1'0 // SemVer
+#ifndef JMP
+#define JMP 2'1'0 // SemVer
 #pragma GCC system_header
 
 extern "C" int mprotect(void*, __SIZE_TYPE__, int);
 
-namespace mut::inline v2_1_0 {
+namespace jmp::inline v2_1_0 {
 using u8  = __UINT8_TYPE__;
 using u16 = __UINT16_TYPE__;
 using u32 = __UINT32_TYPE__;
@@ -375,8 +375,8 @@ struct entry {
   void* memory{}; /// code memory (to be patched)
   u64 offset{};   /// jmp offset
 };
-extern "C" entry __start___mut [[gnu::section("__mut")]];
-extern "C" entry __stop___mut [[gnu::section("__mut")]];
+extern "C" entry __start___jmp [[gnu::section("__jmp")]];
+extern "C" entry __stop___jmp [[gnu::section("__jmp")]];
 } // detail
 
 #if defined(__x86_64__)
@@ -384,7 +384,7 @@ inline namespace x86_64 {
 /**
  * Minimal overhead (via code patching) static bool
  */
-class static_bool final {
+class conditional final {
   using uop_t = utility::array<u8, 5u>;
   static constexpr uop_t NOP{0x0f, 0x1f, 0x44, 0x00, 0x00}; /// https://www.felixcloutier.com/x86/nop
   struct [[gnu::packed]] JMP{ u8 op{0xe9}; u32 offset; };   /// https://www.felixcloutier.com/x86/jmp
@@ -392,16 +392,16 @@ class static_bool final {
 
  public:
   /**
-   * Creates empty class (static_assert(sizeof(static_bool) == 1u))
+   * Creates empty class (static_assert(sizeof(conditional) == 1u))
    * @param direction initial branch direction (direction: should be false)
    */
-  constexpr explicit(false) static_bool(const auto direction) noexcept {
+  constexpr explicit(false) conditional(const auto direction) noexcept {
     void failed(); if (direction) failed(); /// direction should be false by default for better performance: { false: nop, true: unconditional jmp }
   }
-  constexpr static_bool(const static_bool&) noexcept = delete;
-  constexpr static_bool(static_bool&&) noexcept = delete;
-  constexpr auto operator=(const static_bool&) noexcept = delete;
-  constexpr auto operator=(static_bool&&) noexcept = delete;
+  constexpr conditional(const static_bool&) noexcept = delete;
+  constexpr conditional(static_bool&&) noexcept = delete;
+  constexpr auto operator=(const conditional&) noexcept = delete;
+  constexpr auto operator=(conditional&&) noexcept = delete;
 
   /**
    * Makes required pages writable for code patching
@@ -412,7 +412,7 @@ class static_bool final {
    * @return 0 if succesful, -1 on error (errno is set to indicate the error)
    */
   [[nodiscard]] static constexpr auto init(const u64 page_size = 4096u, const u64 permissions = 0b111) noexcept -> int {
-    for (auto entry = &detail::__start___mut; entry != &detail::__stop___mut; ++entry) {
+    for (auto entry = &detail::__start___jmp; entry != &detail::__stop___jmp; ++entry) {
       const auto memory = reinterpret_cast<void*>((u64)entry->memory & ~(page_size - 1u));
       if (const auto error = mprotect(memory, sizeof(uop_t), permissions)) {
         return error;
@@ -428,7 +428,7 @@ class static_bool final {
   constexpr void operator=(const auto direction) const noexcept {
     JMP jmp{};
     const uop_t* ops[]{&NOP, reinterpret_cast<const uop_t*>(&jmp)};
-    for (auto entry = &detail::__start___mut; entry != &detail::__stop___mut; ++entry) {
+    for (auto entry = &detail::__start___jmp; entry != &detail::__stop___jmp; ++entry) {
       if (entry->self != this) continue;
       jmp.offset = static_cast<u32>(entry->offset);
       *static_cast<uop_t*>(entry->memory) = *ops[direction];
@@ -442,7 +442,7 @@ class static_bool final {
   [[gnu::always_inline]] [[nodiscard]] inline operator bool() const noexcept {
     asm volatile goto("0:"
       ".byte %c3, %c4, %c5, %c6, %c7 \n"
-      ".pushsection __mut, \"aw\" \n"
+      ".pushsection __jmp, \"aw\" \n"
       ".balign %c0 \n"
       ".quad %c1, 0b, %l[true_] - (0b + %c2) \n"
       ".popsection \n"
@@ -457,21 +457,21 @@ class static_bool final {
 };
 } // namespace x86_64
 #endif
-} // namespace mut
+} // namespace jmp
 
 #ifndef NTEST
 static_assert(([] {
   constexpr auto expect = [](bool cond) { if (not cond) { void failed(); failed(); } };
 
-  // mut::utility::array
+  // jmp::utility::array
   {
     {
-      mut::utility::array<int, 1> a{};
+      jmp::utility::array<int, 1> a{};
       expect(1u == a.size());
       expect(0 == a[0]);
     }
     {
-      mut::utility::array a{1, 2, 3};
+      jmp::utility::array a{1, 2, 3};
       expect(3u == a.size());
       expect(1 == a[0]);
       expect(2 == a[1]);
@@ -479,14 +479,14 @@ static_assert(([] {
     }
   }
 
-  // mut::static_bool
+  // jmp::conditional
   {
-    static_assert(1u == sizeof(mut::static_bool));
-    static_assert(not [](auto... ts) { return requires { mut::static_bool{ts...}; }; }());
-    static_assert(not [](auto... ts) { return requires { mut::static_bool{ts...}; }; }(mut::static_bool{false}));
-    static_assert([](auto direction) { return requires { mut::static_bool{direction}; }; }(false));
+    static_assert(1u == sizeof(jmp::conditional));
+    static_assert(not [](auto... ts) { return requires { jmp::conditional{ts...}; }; }());
+    static_assert(not [](auto... ts) { return requires { jmp::conditional{ts...}; }; }(jmp::static_bool{false}));
+    static_assert([](auto direction) { return requires { jmp::conditional{direction}; }; }(false));
   }
 }(), true));
 #endif // NTEST
-#endif // MUT
+#endif // JMP
 #endif // README
