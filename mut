@@ -23,7 +23,7 @@
 
 > Performance
 
-  -          branch is relatively stable through its life cycle
+  - branch is relatively stable through its life cycle
   - `and/or` branch is expensive to compute and/or require memory access
   - `and/or` branch is hard to predict/learn by the hardware
 
