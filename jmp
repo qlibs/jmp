@@ -250,7 +250,7 @@ class static_branch final {
 > Configuration
 
 ```cpp
-#define JMP 3'0'0 // Current library version (SemVer)
+#define $JMP 3'0'0 // Current library version (SemVer)
 ```
 
 ---
@@ -346,8 +346,8 @@ class static_branch final {
 
 <!--
 #else
-#ifndef JMP
-#define JMP 3'0'0 // SemVer
+#ifndef $JMP
+#define $JMP 3'0'0 // SemVer
 #pragma GCC system_header
 
 extern "C" int mprotect(void*, __SIZE_TYPE__, int);
@@ -488,5 +488,5 @@ static_assert(([] {
   }
 }(), true));
 #endif // NTEST
-#endif // JMP
+#endif // $JMP
 #endif // README
