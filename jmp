@@ -250,7 +250,7 @@ class static_branch final {
 > Configuration
 
 ```cpp
-#define JMP 3'0'0 // Current library version (SemVer)
+#define $JMP 3'0'0 // Current library version (SemVer)
 ```
 
 ---
