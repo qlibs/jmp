@@ -42,7 +42,7 @@
 
 ### Overview
 
-> `static_branch` (https://godbolt.org/z/YsP9dPY5M)
+> `static_branch` (https://godbolt.org/z/nx8G7v6zE)
 
 ```cpp
 /**
