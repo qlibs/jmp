@@ -122,7 +122,8 @@ class static_bool final {
   /**
    * Creates empty class static_bool (sizeof(static_bool) == 1u)
    * @param direction initial branch direction
-   * Note: direction should be false by default for better performance: { false: nop, true: unconditional jmp }
+   * Note: direction should be false by default
+   *       for better performance: { false: nop, true: unconditional jmp }
    */
   constexpr explicit(false) static_bool(const auto direction) noexcept;
   constexpr static_bool(const static_bool&) noexcept = delete;
