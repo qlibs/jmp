@@ -250,7 +250,7 @@ class static_branch final {
 > Configuration
 
 ```cpp
-#define JMP 2'1'0 // Current library version (SemVer)
+#define JMP 3'0'0 // Current library version (SemVer)
 ```
 
 ---
@@ -329,7 +329,7 @@ class static_branch final {
     CPMAddPackage(
       Name jmp
       GITHUB_REPOSITORY qlibs/jmp
-      GIT_TAG v2.1.0
+      GIT_TAG v3.0.0
     )
     add_library(mp INTERFACE)
     target_include_directories(mp SYSTEM INTERFACE ${mp_SOURCE_DIR})
@@ -347,12 +347,12 @@ class static_branch final {
 <!--
 #else
 #ifndef JMP
-#define JMP 2'1'0 // SemVer
+#define JMP 3'0'0 // SemVer
 #pragma GCC system_header
 
 extern "C" int mprotect(void*, __SIZE_TYPE__, int);
 
-namespace jmp::inline v2_1_0 {
+namespace jmp::inline v3_0_0 {
 using u8  = __UINT8_TYPE__;
 using u16 = __UINT16_TYPE__;
 using u32 = __UINT32_TYPE__;
