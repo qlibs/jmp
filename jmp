@@ -217,8 +217,8 @@ class static_branch final {
    *       for better performance: { false: nop, true: unstatic_branch jmp }
    */
   constexpr explicit(false) static_branch(const auto direction) noexcept;
-  constexpr static_branch(const static_bool&) noexcept = delete;
-  constexpr static_branch(static_bool&&) noexcept = delete;
+  constexpr static_branch(const static_branch&) noexcept = delete;
+  constexpr static_branch(static_branch&&) noexcept = delete;
   constexpr auto operator=(const static_branch&) noexcept = delete;
   constexpr auto operator=(static_branch&&) noexcept = delete;
 
@@ -250,7 +250,7 @@ class static_branch final {
 > Configuration
 
 ```cpp
-#define $JMP 3'0'0 // Current library version (SemVer)
+#define JMP 3'0'0 // Current library version (SemVer)
 ```
 
 ---
@@ -346,9 +346,9 @@ class static_branch final {
 
 <!--
 #else
+#pragma GCC system_header
 #ifndef $JMP
 #define $JMP 3'0'0 // SemVer
-#pragma GCC system_header
 
 extern "C" int mprotect(void*, __SIZE_TYPE__, int);
 
@@ -398,8 +398,8 @@ class static_branch final {
   constexpr explicit(false) static_branch(const auto direction) noexcept {
     void failed(); if (direction) failed(); /// direction should be false by default for better performance: { false: nop, true: unstatic_branch jmp }
   }
-  constexpr static_branch(const static_bool&) noexcept = delete;
-  constexpr static_branch(static_bool&&) noexcept = delete;
+  constexpr static_branch(const static_branch&) noexcept = delete;
+  constexpr static_branch(static_branch&&) noexcept = delete;
   constexpr auto operator=(const static_branch&) noexcept = delete;
   constexpr auto operator=(static_branch&&) noexcept = delete;
 
@@ -446,7 +446,7 @@ class static_branch final {
       ".balign %c0 \n"
       ".quad %c1, 0b, %l[true_] - (0b + %c2) \n"
       ".popsection \n"
-      : : "i"(alignof(this)),
+      : : "i"(alignof(void*)),
           "i"(this),
           "i"(sizeof(uop_t)),
           "i"(NOP[0]), "i"(NOP[1]), "i"(NOP[2]), "i"(NOP[3]), "i"(NOP[4])
@@ -483,7 +483,7 @@ static_assert(([] {
   {
     static_assert(1u == sizeof(jmp::static_branch));
     static_assert(not [](auto... ts) { return requires { jmp::static_branch{ts...}; }; }());
-    static_assert(not [](auto... ts) { return requires { jmp::static_branch{ts...}; }; }(jmp::static_bool{false}));
+    static_assert(not [](auto... ts) { return requires { jmp::static_branch{ts...}; }; }(jmp::static_branch{false}));
     static_assert([](auto direction) { return requires { jmp::static_branch{direction}; }; }(false));
   }
 }(), true));
