@@ -214,7 +214,7 @@ class static_branch final {
    * Creates empty class (static_assert(sizeof(static_branch) == 1u))
    * @param direction initial branch direction
    * Note: direction should be false by default
-   *       for better performance: { false: nop, true: unstatic_branch jmp }
+   *       for better performance: { false: nop, true: jmp }
    */
   constexpr explicit(false) static_branch(const auto direction) noexcept;
   constexpr static_branch(const static_branch&) noexcept = delete;
@@ -396,7 +396,7 @@ class static_branch final {
    * @param direction initial branch direction (direction: should be false)
    */
   constexpr explicit(false) static_branch(const auto direction) noexcept {
-    void failed(); if (direction) failed(); /// direction should be false by default for better performance: { false: nop, true: unstatic_branch jmp }
+    void failed(); if (direction) failed(); /// direction should be false by default for better performance: { false: nop, true: jmp }
   }
   constexpr static_branch(const static_branch&) noexcept = delete;
   constexpr static_branch(static_branch&&) noexcept = delete;
