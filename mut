@@ -113,7 +113,7 @@ main: // $CXX -O3
 
 ### Examples
 
-> `variant` (https://godbolt.org/z/GGTPqvY3b)
+> `variant` (https://godbolt.org/z/GGTPqvY3b) | (https://wg21.link/P2996)
 
 ```cpp
 template<class... Ts>
