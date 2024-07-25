@@ -446,7 +446,7 @@ class static_branch final {
       ".balign %c0 \n"
       ".quad %c1, 0b, %l[true_] - (0b + %c2) \n"
       ".popsection \n"
-      : : "i"(alignof(void*)),
+      : : "i"(alignof(u64)),
           "i"(this),
           "i"(sizeof(uop_t)),
           "i"(NOP[0]), "i"(NOP[1]), "i"(NOP[2]), "i"(NOP[3]), "i"(NOP[4])
