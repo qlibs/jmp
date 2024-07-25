@@ -67,6 +67,8 @@ void fun() {
 }
 
 int main() {
+  mut::static_bool::init(); // mprotect pages
+
   fun(); // not taken
 
   semi_runtime_branch = true;
@@ -113,20 +115,37 @@ main: // $CXX -O3
 ### API
 
 ```cpp
+/**
+ * Minimal overhead (via code patching) static bool
+ */
 class static_bool final {
  public:
-  template<auto Id = +[]{}>
-  constexpr static_bool(const bool direction) noexcept;
+  /**
+   * Creates empty class static_bool (sizeof(static_bool) == 1u)
+   * @param direction initial branch direction (direction: should be false)
+   */
+  constexpr explicit(false) static_bool(const auto direction) noexcept;
   constexpr static_bool(const static_bool&) noexcept = delete;
   constexpr static_bool(static_bool&&) noexcept = delete;
   constexpr auto operator=(const static_bool&) noexcept = delete;
   constexpr auto operator=(static_bool&&) noexcept = delete;
 
   /**
+   * Makes required pages writable for code patching
+   * Note: Must be called before chaning the branch direction (branch = true/false)
+   *       Should be called only once per application
+   * @param page_size page size (default: 4096 / sysconf(_SC_PAGESIZE))
+   * @param permissions protect permissions (default: 0b111 / PROT_READ | PROT_WRITE | PROT_EXEC)
+   * @return 0 if succesful, -1 on error (errno is set to indicate the error)
+   */
+  [[nodiscard]] static constexpr auto init(
+    const u64 page_size = sysconf(_SC_PAGESIZE), const u64 permissions = 0b111) noexcept -> int;
+
+  /**
    * Updates branch direction
    * @param direction new branch direction
    */
-  void operator=(const bool direction) const noexcept;
+  constexpr void operator=(const auto direction) const noexcept;
 
   /**
    * Returns branch direction
@@ -239,20 +258,28 @@ class static_bool final {
 #define MUT 2'0'0 // SemVer
 #pragma GCC system_header
 
-#include <array>      // std::array
-#include <cassert>    // assert
-#include <unistd.h>   // PAGESIZE
-#include <sys/mman.h> // mprotect
+extern "C" int mprotect(void*, __SIZE_TYPE__, int);
 
 namespace mut::inline v2_0_0 {
 using u8  = __UINT8_TYPE__;
 using u16 = __UINT16_TYPE__;
 using u32 = __UINT32_TYPE__;
 using u64 = __UINT64_TYPE__;
+using size_t = __SIZE_TYPE__;
+
+namespace utility {
+template<class T, size_t N>
+struct array {
+  T data[N]{};
+  [[nodiscard]] constexpr const auto& operator[](size_t I) const { return data[I]; }
+  static constexpr auto size() { return N; }
+};
+template<class T, class... Ts> array(T, Ts...) -> array<T, 1u + sizeof...(Ts)>;
+} // utility
 
 namespace detail {
 struct entry {
-  void (*id)(){}; /// identifier
+  void *self{};   /// identifier
   void* memory{}; /// code memory (to be patched)
   u64 offset{};   /// jmp offset
 };
@@ -260,44 +287,57 @@ extern "C" entry __start___mut [[gnu::section("__mut")]];
 extern "C" entry __stop___mut [[gnu::section("__mut")]];
 } // detail
 
+#if defined(__x86_64__)
 inline namespace x86 {
 /**
- * Minimal overhead static bool
+ * Minimal overhead (via code patching) static bool
  */
 class static_bool final {
-  using uop_t = std::array<u8, 5u>;
+  using uop_t = utility::array<u8, 5u>;
   static constexpr uop_t NOP{0x0f, 0x1f, 0x44, 0x00, 0x00}; /// https://www.felixcloutier.com/x86/nop
   struct [[gnu::packed]] JMP{ u8 op{0xe9}; u32 offset; };   /// https://www.felixcloutier.com/x86/jmp
   static_assert(sizeof(NOP) == sizeof(JMP));
 
  public:
-  template<auto Id = +[]{}>
-  constexpr static_bool(const bool direction) noexcept : id_{Id} {
-    void failed(); if (direction) failed(); /// direction should be false for performance: { false: nop, true: unconditional jmp }
+  /**
+   * Creates empty class static_bool (sizeof(static_bool) == 1u)
+   * @param direction initial branch direction (direction: should be false)
+   */
+  constexpr explicit(false) static_bool(const auto direction) noexcept {
+    void failed(); if (direction) failed(); /// direction should be false by default / performance: { false: nop, true: unconditional jmp }
   }
   constexpr static_bool(const static_bool&) noexcept = delete;
   constexpr static_bool(static_bool&&) noexcept = delete;
   constexpr auto operator=(const static_bool&) noexcept = delete;
   constexpr auto operator=(static_bool&&) noexcept = delete;
 
-  static const inline auto init = ([] {
-    constexpr auto permissions = PROT_READ | PROT_WRITE | PROT_EXEC;
-    const auto page_size = sysconf(_SC_PAGESIZE);
+  /**
+   * Makes required pages writable for code patching
+   * Note: Must be called before chaning the branch direction (branch = true/false)
+   *       Should be called only once per application
+   * @param page_size page size (default: 4096 / sysconf(_SC_PAGESIZE))
+   * @param permissions protect permissions (default: 0b111 / PROT_READ | PROT_WRITE | PROT_EXEC)
+   * @return 0 if succesful, -1 on error (errno is set to indicate the error)
+   */
+  [[nodiscard]] static constexpr auto init(const u64 page_size = 4096u, const u64 permissions = 0b111) noexcept -> int {
     for (auto entry = &detail::__start___mut; entry != &detail::__stop___mut; ++entry) {
-      const auto result = mprotect(reinterpret_cast<void*>((u64)entry->memory & ~(page_size - 1u)), sizeof(uop_t), permissions);
-      assert(not result);
+      const auto memory = reinterpret_cast<void*>((u64)entry->memory & ~(page_size - 1u));
+      if (const auto error = mprotect(memory, sizeof(uop_t), permissions)) {
+        return error;
+      }
     }
-  }(), nullptr);
+    return {};
+  }
 
   /**
    * Updates branch direction
    * @param direction new branch direction
    */
-  void operator=(const bool direction) const noexcept {
+  constexpr void operator=(const auto direction) const noexcept {
     JMP jmp{};
-    const std::array<const uop_t*, 2u> ops{&NOP, reinterpret_cast<const uop_t*>(&jmp)};
+    const uop_t* ops[2]{&NOP, reinterpret_cast<const uop_t*>(&jmp)};
     for (auto entry = &detail::__start___mut; entry != &detail::__stop___mut; ++entry) {
-      if (entry->id != id_) continue;
+      if (entry->self != this) continue;
       jmp.offset = static_cast<u32>(entry->offset);
       *static_cast<uop_t*>(entry->memory) = *ops[direction];
     }
@@ -314,31 +354,45 @@ class static_bool final {
       ".balign %c0 \n"
       ".quad %c1, 0b, %l[true_] - (0b + %c2) \n"
       ".popsection \n"
-      : : "i"(alignof(u64)),
-          "i"(id_),
+      : : "i"(alignof(this)),
+          "i"(this),
           "i"(sizeof(uop_t)),
           "i"(NOP[0]), "i"(NOP[1]), "i"(NOP[2]), "i"(NOP[3]), "i"(NOP[4])
       : : true_);
     false_: return false;
     true_:  return true;
   }
-
- private:
-  void (*id_)(){};
 };
 } // namespace x86
+#endif
 } // namespace mut
 
 #ifndef NTEST
 static_assert(([] {
+  constexpr auto expect = [](bool cond) { if (not cond) { void failed(); failed(); } };
+
+  // mut::utility::array
+  {
+    {
+      mut::utility::array<int, 1> a{};
+      expect(1u == a.size());
+      expect(0 == a[0]);
+    }
+    {
+      mut::utility::array a{1, 2, 3};
+      expect(3u == a.size());
+      expect(1 == a[0]);
+      expect(2 == a[1]);
+      expect(3 == a[2]);
+    }
+  }
 
   // mut::static_bool
   {
-    //static_assert(mut::static_bool{false} != mut::static_bool{false});
-    //constexpr mut::static_bool a = false;
-    //constexpr mut::static_bool b = false;
-    //static_assert(a == a);
-    //static_assert(a != b);
+    static_assert(1u == sizeof(mut::static_bool));
+    static_assert(not [](auto... ts) { return requires { mut::static_bool{ts...}; }; }());
+    static_assert(not [](auto... ts) { return requires { mut::static_bool{ts...}; }; }(mut::static_bool{false}));
+    static_assert([](auto direction) { return requires { mut::static_bool{direction}; }; }(false));
   }
 }(), true));
 #endif // NTEST
