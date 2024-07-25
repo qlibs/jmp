@@ -66,7 +66,7 @@ void fun() {
 }
 
 int main() {
-  mut::static_bool::init(); // enables run-time code patching
+  std::ignore = mut::static_bool::init(); // enables run-time code patching
 
   fun(); // not taken
 
