@@ -10,8 +10,8 @@
 // -->
 [![Boost Licence](http://img.shields.io/badge/license-boost-blue.svg)](http://www.boost.org/LICENSE_1_0.txt)
 [![Version](https://badge.fury.io/gh/qlibs%2Fjmp.svg)](https://github.com/qlibs/jmp/releases)
-[![build](https://img.shields.io/badge/build-blue.svg)](https://godbolt.org/z/hbTrc4n13)
-[![Try it online](https://img.shields.io/badge/try%20it-online-blue.svg)](https://godbolt.org/z/PGvseqsaf)
+[![build](https://img.shields.io/badge/build-blue.svg)](https://godbolt.org/z/j5nW57e7W)
+[![Try it online](https://img.shields.io/badge/try%20it-online-blue.svg)](https://godbolt.org/z/jjqzY7Wf6)
 
 ---------------------------------------
 
@@ -42,13 +42,13 @@
 
 ### Overview
 
-> `conditional` (https://godbolt.org/z/aY6Yna5fs)
+> `static_branch` (https://godbolt.org/z/YsP9dPY5M)
 
 ```cpp
 /**
  * constexpr minimal overhead static bool changed at run-time via code patching
  */
-constexpr jmp::conditional semi_runtime_branch = false;
+constexpr jmp::static_branch semi_runtime_branch = false;
 
 /**
  * Note: `fun` can be inline/noinline/constexpr/etc.
@@ -66,7 +66,7 @@ void fun() {
 }
 
 int main() {
-  std::ignore = jmp::conditional::init(); // enables run-time code patching
+  std::ignore = jmp::static_branch::init(); // enables run-time code patching
 
   fun(); // not taken
 
@@ -113,7 +113,7 @@ main: // $CXX -O3
 
 ### Examples
 
-> `variant` (https://godbolt.org/z/j4E85oMrx) | (https://wg21.link/P2996)
+> `variant` (https://godbolt.org/z/breWs5xfb) | (https://wg21.link/P2996)
 
 ```cpp
 template<class... Ts>
@@ -155,7 +155,7 @@ private:
     std::meta::data_member_spec(^Ts)...
   })));
   template<class...> static constexpr auto false_v = false;
-  static constexpr std::array options{jmp::conditional{false_v<Ts>}...};
+  static constexpr std::array options{jmp::static_branch{false_v<Ts>}...};
   storage storage_{.empty={}};
 };
 ```
@@ -170,7 +170,7 @@ void usage(const variant<bool, int, float>& v) {
 }
 
 int main() {
-  std::ignore = jmp::conditional::init();
+  std::ignore = jmp::static_branch::init();
 
   variant<bool, int, float> v{};
 
@@ -208,19 +208,19 @@ usage(variant<bool, int, float> const&):
 /**
  * Minimal overhead (via code patching) static bool
  */
-class conditional final {
+class static_branch final {
  public:
   /**
-   * Creates empty class (static_assert(sizeof(conditional) == 1u))
+   * Creates empty class (static_assert(sizeof(static_branch) == 1u))
    * @param direction initial branch direction
    * Note: direction should be false by default
-   *       for better performance: { false: nop, true: unconditional jmp }
+   *       for better performance: { false: nop, true: unstatic_branch jmp }
    */
-  constexpr explicit(false) conditional(const auto direction) noexcept;
-  constexpr conditional(const static_bool&) noexcept = delete;
-  constexpr conditional(static_bool&&) noexcept = delete;
-  constexpr auto operator=(const conditional&) noexcept = delete;
-  constexpr auto operator=(conditional&&) noexcept = delete;
+  constexpr explicit(false) static_branch(const auto direction) noexcept;
+  constexpr static_branch(const static_bool&) noexcept = delete;
+  constexpr static_branch(static_bool&&) noexcept = delete;
+  constexpr auto operator=(const static_branch&) noexcept = delete;
+  constexpr auto operator=(static_branch&&) noexcept = delete;
 
   /**
    * Makes required pages writable for code patching
@@ -261,13 +261,13 @@ class conditional final {
 
   > `jmp` is using technique called code patching - which basically means that the code modifies itself.
 
-  `jmp::conditional` is based on https://docs.kernel.org/staging/static-keys.html and it requires `asm goto` support (gcc, clang).
+  `jmp::static_branch` is based on https://docs.kernel.org/staging/static-keys.html and it requires `asm goto` support (gcc, clang).
   `jmp` currently supports x86-64 Linux, but other platforms can be added using the same technique.
 
   Example:
 
     ```cpp
-    constexpr jmp::conditional b = false;
+    constexpr jmp::static_branch b = false;
 
     if (b) {
       return 42;
@@ -384,7 +384,7 @@ inline namespace x86_64 {
 /**
  * Minimal overhead (via code patching) static bool
  */
-class conditional final {
+class static_branch final {
   using uop_t = utility::array<u8, 5u>;
   static constexpr uop_t NOP{0x0f, 0x1f, 0x44, 0x00, 0x00}; /// https://www.felixcloutier.com/x86/nop
   struct [[gnu::packed]] JMP{ u8 op{0xe9}; u32 offset; };   /// https://www.felixcloutier.com/x86/jmp
@@ -392,16 +392,16 @@ class conditional final {
 
  public:
   /**
-   * Creates empty class (static_assert(sizeof(conditional) == 1u))
+   * Creates empty class (static_assert(sizeof(static_branch) == 1u))
    * @param direction initial branch direction (direction: should be false)
    */
-  constexpr explicit(false) conditional(const auto direction) noexcept {
-    void failed(); if (direction) failed(); /// direction should be false by default for better performance: { false: nop, true: unconditional jmp }
+  constexpr explicit(false) static_branch(const auto direction) noexcept {
+    void failed(); if (direction) failed(); /// direction should be false by default for better performance: { false: nop, true: unstatic_branch jmp }
   }
-  constexpr conditional(const static_bool&) noexcept = delete;
-  constexpr conditional(static_bool&&) noexcept = delete;
-  constexpr auto operator=(const conditional&) noexcept = delete;
-  constexpr auto operator=(conditional&&) noexcept = delete;
+  constexpr static_branch(const static_bool&) noexcept = delete;
+  constexpr static_branch(static_bool&&) noexcept = delete;
+  constexpr auto operator=(const static_branch&) noexcept = delete;
+  constexpr auto operator=(static_branch&&) noexcept = delete;
 
   /**
    * Makes required pages writable for code patching
@@ -479,12 +479,12 @@ static_assert(([] {
     }
   }
 
-  // jmp::conditional
+  // jmp::static_branch
   {
-    static_assert(1u == sizeof(jmp::conditional));
-    static_assert(not [](auto... ts) { return requires { jmp::conditional{ts...}; }; }());
-    static_assert(not [](auto... ts) { return requires { jmp::conditional{ts...}; }; }(jmp::static_bool{false}));
-    static_assert([](auto direction) { return requires { jmp::conditional{direction}; }; }(false));
+    static_assert(1u == sizeof(jmp::static_branch));
+    static_assert(not [](auto... ts) { return requires { jmp::static_branch{ts...}; }; }());
+    static_assert(not [](auto... ts) { return requires { jmp::static_branch{ts...}; }; }(jmp::static_bool{false}));
+    static_assert([](auto direction) { return requires { jmp::static_branch{direction}; }; }(false));
   }
 }(), true));
 #endif // NTEST
