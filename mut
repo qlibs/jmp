@@ -109,6 +109,97 @@ main: // $CXX -O3
 .L.str.2: .asciz "not taken"
 ```
 
+----
+
+### Examples
+
+> `variant` (https://godbolt.org/z/GGTPqvY3b)
+
+```cpp
+template<class... Ts>
+class variant {
+ public:
+  template<class T>
+  constexpr explicit(false) variant(T&& t) {
+    constexpr auto index = [] {
+      std::array match{std::is_same_v<Ts, std::remove_cvref_t<T>>...};
+      return std::ranges::find(match, true)-match.begin();
+    }();
+    for (auto& option : options) option = false;
+    options[index] = true;
+    std::construct_at(&storage_.[:
+      nonstatic_data_members_of(^storage)[index+1u] :], std::forward<T>(t)
+    );
+  }
+
+  template<auto N = 0u, class Fn>
+  constexpr auto visit(Fn&& fn) const -> decltype(auto) {
+    if constexpr (N < sizeof...(Ts)) {
+      if (options[N]) {
+        return std::invoke(std::forward<Fn>(fn),
+          storage_.[: nonstatic_data_members_of(^storage)[N+1u] :]);
+      } else {
+        return visit<N + 1u>(std::forward<Fn>(fn));
+      }
+    }
+    std::unreachable();
+  }
+
+  // ...
+
+private:
+  union storage;
+  struct empty{ };
+  static_assert(is_type(define_class(^storage, {
+    std::meta::data_member_spec(^empty, {.name = "empty"}),
+    std::meta::data_member_spec(^Ts)...
+  })));
+  template<class...> static constexpr auto false_v = false;
+  static constexpr std::array options{mut::static_bool{false_v<Ts>}...};
+  storage storage_{.empty={}};
+};
+```
+
+```cpp
+void usage(const variant<bool, int, float>& v) {
+  v.visit(overload{
+    [](bool)  { std::puts("bool");  },
+    [](int)   { std::puts("int");   },
+    [](float) { std::puts("float"); },
+  });
+}
+
+int main() {
+  std::ignore = mut::static_bool::init();
+
+  variant<bool, int, float> v{};
+
+  v = true;
+  usage(v);
+
+  v = 42;
+  usage(v);
+
+  v = 42.f;
+  usage(v);
+}
+```
+
+```cpp
+usage(variant<bool, int, float> const&):
+  lea rdi, [rip + .L.str.1]
+  nop # code patching (nop->jmp)
+  lea rdi, [rip + .L.str.2]
+  nop # code patching (jmp->jmp)
+  lea rdi, [rip + .L.str.3]
+  nop # code patching (jmp->jmp)
+  jmp puts
+
+.L.str.1: .asciz  "bool"
+.L.str.2: .asciz  "int"
+.L.str.3: .asciz  "float"
+```
+
 ---
 
 ### API
