@@ -250,7 +250,7 @@ class static_bool final {
 > Configuration
 
 ```cpp
-#define MUT 2'0'0 // Current library version (SemVer)
+#define MUT 2'1'0 // Current library version (SemVer)
 ```
 
 ---
@@ -329,7 +329,7 @@ class static_bool final {
     CPMAddPackage(
       Name mut
       GITHUB_REPOSITORY boost-ext/mut
-      GIT_TAG v2.0.0
+      GIT_TAG v2.1.0
     )
     add_library(mp INTERFACE)
     target_include_directories(mp SYSTEM INTERFACE ${mp_SOURCE_DIR})
@@ -347,12 +347,12 @@ class static_bool final {
 <!--
 #else
 #ifndef MUT
-#define MUT 2'0'0 // SemVer
+#define MUT 2'1'0 // SemVer
 #pragma GCC system_header
 
 extern "C" int mprotect(void*, __SIZE_TYPE__, int);
 
-namespace mut::inline v2_0_0 {
+namespace mut::inline v2_1_0 {
 using u8  = __UINT8_TYPE__;
 using u16 = __UINT16_TYPE__;
 using u32 = __UINT32_TYPE__;
