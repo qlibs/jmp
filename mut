@@ -380,7 +380,7 @@ extern "C" entry __stop___mut [[gnu::section("__mut")]];
 } // detail
 
 #if defined(__x86_64__)
-inline namespace x86 {
+inline namespace x86_64 {
 /**
  * Minimal overhead (via code patching) static bool
  */
@@ -427,7 +427,7 @@ class static_bool final {
    */
   constexpr void operator=(const auto direction) const noexcept {
     JMP jmp{};
-    const uop_t* ops[2]{&NOP, reinterpret_cast<const uop_t*>(&jmp)};
+    const uop_t* ops[]{&NOP, reinterpret_cast<const uop_t*>(&jmp)};
     for (auto entry = &detail::__start___mut; entry != &detail::__stop___mut; ++entry) {
       if (entry->self != this) continue;
       jmp.offset = static_cast<u32>(entry->offset);
@@ -455,7 +455,7 @@ class static_bool final {
     true_:  return true;
   }
 };
-} // namespace x86
+} // namespace x86_64
 #endif
 } // namespace mut
 
