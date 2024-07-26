@@ -264,7 +264,7 @@ class static_branch final {
   `jmp::static_branch` is based on https://docs.kernel.org/staging/static-keys.html and it requires `asm goto` support (gcc, clang).
   `jmp` currently supports x86-64 Linux, but other platforms can be added using the same technique.
 
-  Example:
+  Example
 
     ```cpp
     constexpr jmp::static_branch b = false;
@@ -276,7 +276,7 @@ class static_branch final {
     }
     ```
 
-  > It will emit...
+  > Will emit...
 
     ```cpp
     main:
@@ -288,7 +288,7 @@ class static_branch final {
       ret
     ```
 
-  > Which will effectively execute...
+  > Will effectively execute...
 
     ```cpp
     main:
@@ -309,7 +309,7 @@ class static_branch final {
     }
     ```
 
-  > It will emit...
+  > Will emit...
 
     ```cpp
     main:
