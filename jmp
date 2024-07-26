@@ -459,8 +459,8 @@ class static_branch final {
   constexpr void operator=(const auto direction_entry) const noexcept
     requires requires { bool(direction_entry.first); direction_entry.second.offset; } {
     const auto& [direction, entry] = direction_entry;
-    JMP jmp{}; const uop_t* ops[]{&NOP, reinterpret_cast<const uop_t*>(&jmp)};
-    jmp.offset = static_cast<u32>(entry.offset);
+    const JMP jmp{.offset = static_cast<u32>(entry.offset)};
+    const uop_t* ops[]{&NOP, reinterpret_cast<const uop_t*>(&jmp)};
     *static_cast<uop_t*>(entry.memory) = *ops[direction];
   }
 
