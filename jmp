@@ -276,7 +276,7 @@ class static_branch final {
     }
     ```
 
-  it will emit...
+  > It will emit...
 
     ```cpp
     main:
@@ -288,7 +288,7 @@ class static_branch final {
       ret
     ```
 
-  which will effectively execute...
+  > Which will effectively execute...
 
     ```cpp
     main:
@@ -297,7 +297,7 @@ class static_branch final {
       ret
     ```
 
-  now, if we change the branch direction at run-time...
+  > If the branch direction will be changed (at run-time)...
 
     ```cpp
     b = true;
@@ -309,7 +309,7 @@ class static_branch final {
     }
     ```
 
-  it will emit...
+  > It will emit...
 
     ```cpp
     main:
