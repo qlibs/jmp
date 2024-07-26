@@ -216,7 +216,8 @@ class static_branch final {
    * Note: direction should be false by default
    *       for better performance: { false: nop, true: jmp }
    */
-  constexpr explicit(false) static_branch(const auto direction) noexcept;
+  constexpr explicit(false) static_branch(const auto direction) noexcept
+    requires requires { bool(direction); };
   constexpr static_branch(const static_branch&) noexcept = delete;
   constexpr static_branch(static_branch&&) noexcept = delete;
   constexpr auto operator=(const static_branch&) noexcept = delete;
@@ -251,7 +252,7 @@ class static_branch final {
    * Returns branch direction
    * @return current branch direction
    */
-  [[gnu::always_inline]] [[nodiscard]] inline operator bool() const noexcept;
+  [[gnu::always_inline]] [[nodiscard]] inline explicit(true) operator bool() const noexcept;
 
   /**
    * struct entry {
