@@ -240,10 +240,27 @@ class static_branch final {
   constexpr void operator=(const auto direction) const noexcept;
 
   /**
+   * Updates branch direction
+   * @param direction new branch direction for specific entry `pair{direction, entry}`
+   */
+  constexpr void operator=(const auto direction_entry) const noexcept
+    requires requires { bool(direction_entry.first); direction_entry.second.offset; };
+
+  /**
    * Returns branch direction
    * @return current branch direction
    */
   [[gnu::always_inline]] [[nodiscard]] inline operator bool() const noexcept;
+
+  /**
+   * struct entry {
+   *   void *self{};   /// identifier (this pointer of the branch)
+   *   void* memory{}; /// code memory (to be patched)
+   *   u64 offset{};   /// jmp offset
+   * };
+   */
+  [[nodiscard]] static constexpr auto begin() noexcept -> const entry*;
+  [[nodiscard]] static constexpr auto end() noexcept -> const entry*;
 };
 ```
 
@@ -411,7 +428,7 @@ class static_branch final {
    * @param permissions protect permissions (default: PROT_READ | PROT_WRITE | PROT_EXEC)
    * @return 0 if succesful, -1 on error (errno is set to indicate the error)
    */
-  [[nodiscard]] static constexpr auto init(const u64 page_size = 4096u, const u64 permissions = 0b111) noexcept -> int {
+  [[nodiscard]] static inline auto init(const u64 page_size = 4096u, const u64 permissions = 0b111) noexcept -> int {
     for (auto entry = &detail::__start___jmp; entry != &detail::__stop___jmp; ++entry) {
       const auto memory = reinterpret_cast<void*>((u64)entry->memory & ~(page_size - 1u));
       if (const auto error = mprotect(memory, sizeof(uop_t), permissions)) {
@@ -426,13 +443,24 @@ class static_branch final {
    * @param direction new branch direction
    */
   constexpr void operator=(const auto direction) const noexcept {
-    JMP jmp{};
-    const uop_t* ops[]{&NOP, reinterpret_cast<const uop_t*>(&jmp)};
-    for (auto entry = &detail::__start___jmp; entry != &detail::__stop___jmp; ++entry) {
-      if (entry->self != this) continue;
-      jmp.offset = static_cast<u32>(entry->offset);
-      *static_cast<uop_t*>(entry->memory) = *ops[direction];
+    JMP jmp{}; const uop_t* ops[]{&NOP, reinterpret_cast<const uop_t*>(&jmp)};
+    for (const auto& entry: *this) {
+      if (entry.self != this) continue;
+      jmp.offset = static_cast<u32>(entry.offset);
+      *static_cast<uop_t*>(entry.memory) = *ops[direction];
     }
+  }
+
+  /**
+   * Updates branch direction
+   * @param direction new branch direction for specific entry `pair{direction, entry}`
+   */
+  constexpr void operator=(const auto direction_entry) const noexcept
+    requires requires { bool(direction_entry.first); direction_entry.second.offset; } {
+    const auto& [direction, entry] = direction_entry;
+    JMP jmp{}; const uop_t* ops[]{&NOP, reinterpret_cast<const uop_t*>(&jmp)};
+    jmp.offset = static_cast<u32>(entry.offset);
+    *static_cast<uop_t*>(entry.memory) = *ops[direction];
   }
 
   /**
@@ -454,6 +482,9 @@ class static_branch final {
     false_: return false;
     true_:  return true;
   }
+
+  [[nodiscard]] static constexpr auto begin() noexcept -> const detail::entry* { return &detail::__start___jmp; }
+  [[nodiscard]] static constexpr auto end() noexcept  -> const detail::entry* { return &detail::__stop___jmp; }
 };
 } // namespace x86_64
 #endif
