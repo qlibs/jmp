@@ -237,7 +237,8 @@ class static_branch final {
    * Updates branch direction
    * @param direction new branch direction
    */
-  constexpr void operator=(const auto direction) const noexcept;
+  constexpr void operator=(const auto direction) const noexcept
+    requires requires { bool(direction); };
 
   /**
    * Updates branch direction
@@ -412,7 +413,7 @@ class static_branch final {
    * Creates empty class (static_assert(sizeof(static_branch) == 1u))
    * @param direction initial branch direction (direction: should be false)
    */
-  constexpr explicit(false) static_branch(const auto direction) noexcept {
+  constexpr explicit(false) static_branch(const auto direction) noexcept requires requires { bool(direction); } {
     void failed(); if (direction) failed(); /// direction should be false by default for better performance: { false: nop, true: jmp }
   }
   constexpr static_branch(const static_branch&) noexcept = delete;
@@ -442,7 +443,8 @@ class static_branch final {
    * Updates branch direction
    * @param direction new branch direction
    */
-  constexpr void operator=(const auto direction) const noexcept {
+  constexpr void operator=(const auto direction) const noexcept
+    requires requires { bool(direction); } {
     JMP jmp{}; const uop_t* ops[]{&NOP, reinterpret_cast<const uop_t*>(&jmp)};
     for (const auto& entry: *this) {
       if (entry.self != this) continue;
@@ -467,7 +469,7 @@ class static_branch final {
    * Returns branch direction
    * @return current branch direction
    */
-  [[gnu::always_inline]] [[nodiscard]] inline operator bool() const noexcept {
+  [[gnu::always_inline]] [[nodiscard]] inline explicit(true) operator bool() const noexcept {
     asm volatile goto("0:"
       ".byte %c3, %c4, %c5, %c6, %c7 \n"
       ".pushsection __jmp, \"aw\" \n"
