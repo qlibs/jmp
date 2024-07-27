@@ -179,7 +179,7 @@ fn(): // https://godbolt.org/z/jvKGdPMWK
 > `static_branch<int>` (https://godbolt.org/z/sP8qzMMnj)
 
 ```cpp
-constexpr jmp::static_branch<int> static_int = 0;
+constexpr jmp::static_branch<int> static_int = 0; /* 0..7 */
 
 void fn() {
   switch (static_int) {
