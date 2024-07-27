@@ -82,7 +82,7 @@ main: // $CXX -O3
   // ... init
   xor eax, eax
 
-  // fn (inlined)
+// fn (inlined)
   nop
   mov edi, OFFSET FLAT:.LC0
   jmp puts
@@ -94,7 +94,7 @@ main: // $CXX -O3
 
   call semi_runtime_branch.operator=(true)
 
-  // fn (inlined)
+// fn (inlined)
   jmp .Ltmp1 // code patching (nop->jmp)
   mov edi, OFFSET FLAT:.LC0
   jmp puts
