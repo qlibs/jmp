@@ -550,7 +550,7 @@ struct static_branch final {
    */
   constexpr const auto& operator=(const auto direction) const noexcept
     requires requires { T(direction); } {
-    entry::JMP jmp{}; const entry::uop_t* ops[]{&entry::NOP, (const entry::uop_t*)(&jmp)};
+    entry::JMP jmp{}; const entry::uop_t* ops[]{&entry::NOP, (const entry::uop_t*)&jmp};
     for (const auto* entry = entry::begin(); entry != entry::end(); ++entry) {
       if (entry->self != this) continue;
       jmp.offset = u32(entry->offset[direction - 1u]);
@@ -568,7 +568,7 @@ struct static_branch final {
     struct uop { entry::uop_t _; };
     const auto& [direction, entry] = direction_entry;
     const entry::JMP jmp{.offset = u32(entry.offset)};
-    const entry::uop_t* ops[]{&entry::NOP, (const entry::uop_t*)(&jmp)};
+    const entry::uop_t* ops[]{&entry::NOP, (const entry::uop_t*)&jmp};
     *static_cast<uop>(entry.memory) = *ops[bool(direction)];
     return *this;
   }
