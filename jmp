@@ -10,8 +10,8 @@
 // -->
 [![Boost Licence](http://img.shields.io/badge/license-boost-blue.svg)](http://www.boost.org/LICENSE_1_0.txt)
 [![Version](https://badge.fury.io/gh/qlibs%2Fjmp.svg)](https://github.com/qlibs/jmp/releases)
-[![build](https://img.shields.io/badge/build-blue.svg)](https://godbolt.org/z/raqj5ohGj)
-[![Try it online](https://img.shields.io/badge/try%20it-online-blue.svg)](https://godbolt.org/z/jjqzY7Wf6)
+[![build](https://img.shields.io/badge/build-blue.svg)](https://godbolt.org/z/zxdzjMcGq)
+[![Try it online](https://img.shields.io/badge/try%20it-online-blue.svg)](https://godbolt.org/z/TrPd91PG5)
 
 ---------------------------------------
 
@@ -42,7 +42,7 @@
 
 ### Overview
 
-> `static_branch<bool>` (https://godbolt.org/z/nx8G7v6zE)
+> `static_branch<bool>` (https://godbolt.org/z/TrPd91PG5)
 
 ```cpp
 /**
@@ -74,46 +74,43 @@ int main() {
 
   semi_runtime_branch = true;
   fn(); // taken
-
-  semi_runtime_branch = false;
-  fn(); // not taken
 }
 ```
 
 ```cpp
 main: // $CXX -O3
-  lea rdi, [rip + .L.str.1]
-  nop # code patching (nop->nop)
-  lea rdi, [rip + .L.str.2]
- .Ltmp1:
-  call puts@PLT # not taken
+  // ... init
+  xor eax, eax
+
+  // fn (inlined)
+  nop
+  mov edi, OFFSET FLAT:.LC0
+  jmp puts
+  ret
+.Ltmp1:
+  mov edi, OFFSET FLAT:.LC1
+  jmp puts
+  ret
 
   call semi_runtime_branch.operator=(true)
 
-  lea rdi, [rip + .L.str.1]
-  jmp .Ltmp2 # code patching (nop->jmp)
-  lea rdi, [rip + .L.str.2]
- .Ltmp2:
-  call puts@PLT # taken
-
-  call semi_runtime_branch.operator=(false)
-
-  lea rdi, [rip + .L.str.1]
-  nop # code patching (jmp->nop)
-  lea rdi, [rip + .L.str.2]
- .Ltmp3:
-  call puts@PLT # not taken
-
-  xor  eax, eax # return 0
+  // fn (inlined)
+  jmp .Ltmp1 // code patching (nop->jmp)
+  mov edi, OFFSET FLAT:.LC0
+  jmp puts
+  ret
+.Ltmp1:
+  mov edi, OFFSET FLAT:.LC1
+  jmp puts
   ret
 
-.L.str.1: .asciz "taken"
-.L.str.2: .asciz "not taken"
+.LC0: .asciz "not taken"
+.LC1: .asciz "taken"
 ```
 
 ----
 
-> `static_branch<int>` (https://godbolt.org/z/nx8G7v6zE)
+> `static_branch<int>` (https://godbolt.org/z/sP8qzMMnj)
 
 ```cpp
 constexpr jmp::static_branch<int> semi_runtime_branch = 0;
@@ -143,45 +140,80 @@ int main() {
 ```
 
 ```cpp
-main: // $CXX -O3
+fn: // $CXX -O3 -fno-inline
+  nop # patching (nop->jmp)
+  mov edi, OFFSET FLAT:.LC0
+  jmp puts
+  ret
+.Ltmp1:
+  mov edi, OFFSET FLAT:.LC1
+  jmp puts
+  ret
+.Ltmp2:
+  mov edi, OFFSET FLAT:.LC2
+  jmp puts
+  ret
+
+main:
+  // ... init
+
+  fn() // 0
+
+  call semi_runtime_branch.operator=(1)
+  fn() // 1
+
+  call semi_runtime_branch.operator=(2)
+  fn() // 2
+
+.LC0: .asciz "0"
+.LC1: .asciz "1"
+.LC2: .asciz "2"
 ```
 
 ----
 
 ### Examples
 
-> `variant` (https://godbolt.org/z/breWs5xfb) | (https://wg21.link/P2996)
+> `variant` (https://godbolt.org/z/4Y8f1zWqE) | (https://wg21.link/P2996)
 
 ```cpp
 template<class... Ts>
 class variant {
+  static constexpr jmp::static_branch<std::size_t> index_ = 0u;
+
  public:
-  template<class T>
-  constexpr explicit(false) variant(T&& t) {
+   constexpr variant() = default;
+
+   template<class T>
+     requires (not std::is_base_of_v<variant, std::remove_cvref_t<T>>)
+   constexpr explicit(false) variant(T&& t) {
     constexpr auto index = [] {
       std::array match{std::is_same_v<Ts, std::remove_cvref_t<T>>...};
-      return std::ranges::find(match, true)-match.begin();
+      return std::ranges::find(match, true) - match.begin();
     }();
     index_ = index;
     std::construct_at(&storage_.[:
-      nonstatic_data_members_of(^storage)[index+1u] :], std::forward<T>(t)
-    );
-  }
+      nonstatic_data_members_of(^storage)[index + 1u]
+    :], std::forward<T>(t));
+   }
+   constexpr ~variant()
+    requires (std::is_trivially_destructible_v<Ts> and ...) = default;
 
-  template<auto N = 0u, class Fn>
-  constexpr auto visit(Fn&& fn) const -> decltype(auto) {
-    if constexpr (N < sizeof...(Ts)) {
-      if (options[N]) {
-        return std::invoke(std::forward<Fn>(fn),
-          storage_.[: nonstatic_data_members_of(^storage)[N+1u] :]);
+   template<class Fn>
+   constexpr auto visit(Fn&& fn) const -> decltype(auto) {
+    return [&]<auto I = 0u>(this auto&& self) {
+      if constexpr (I == sizeof...(Ts)) {
+        std::unreachable();
       } else {
-        return visit<N + 1u>(std::forward<Fn>(fn));
+        switch (index_) {
+          default: return self.template operator()<I + 1u>();
+          case I:  return std::invoke(std::forward<Fn>(fn), storage_.[:
+                            nonstatic_data_members_of(^storage)[I + 1u]
+                          :]);
+        }
       }
-    }
-    std::unreachable();
+    }();
   }
-
-  // ...
 
 private:
   union storage;
@@ -190,7 +222,6 @@ private:
     std::meta::data_member_spec(^empty, {.name = "empty"}),
     std::meta::data_member_spec(^Ts)...
   })));
-  static constexpr jmp::static_branch<u32> index_ = 0u;
   storage storage_{.empty={}};
 };
 ```
@@ -222,10 +253,22 @@ int main() {
 
 ```cpp
 usage(variant<bool, int, float> const&):
+  nop # patching (nop->jmp)
+  mov edi, OFFSET FLAT:.LC0
+  jmp puts
+  ret
+.Ltmp1:
+  mov edi, OFFSET FLAT:.LC1
+  jmp puts
+  ret
+.Ltmp2:
+  mov edi, OFFSET FLAT:.LC2
+  jmp puts
+  ret
 
-.L.str.1: .asciz  "bool"
-.L.str.2: .asciz  "int"
-.L.str.3: .asciz  "float"
+.LC0: .asciz  "bool"
+.LC1: .asciz  "int"
+.LC2: .asciz  "float"
 ```
 
 ---
