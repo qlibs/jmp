@@ -58,7 +58,7 @@ constexpr jmp::static_branch<bool> semi_runtime_branch = false;
  * [[gnu::always_inline]] void fn()
  */
 void fn() {
-  if (semi_runtime_branch) {
+  if (semi_runtime_branch) { // [[likely]] / [[unlikely]]
     std::puts("taken");
   } else {
     std::puts("not taken");
@@ -634,29 +634,4 @@ static_assert(([] {
 }(), true));
 #endif // NTEST
 #endif // $JMP
-#endif // READM
-#include <cstdio>
-
-constexpr jmp::static_branch<bool> semi_runtime_branch = false;
-
-void fun() {
-  if (semi_runtime_branch) {
-    std::puts("taken");
-  } else {
-    std::puts("not taken");
-  }
-}
-
-int main() {
-  if (not jmp::init()) { // enables run-time code patching
-    return -1; // can't change permissions for code pages
-  }
-
-  fun(); // not taken
-
-  semi_runtime_branch = true;
-  fun(); // taken
-
-  semi_runtime_branch = false;
-  fun(); // not taken
-}
+#endif // README
