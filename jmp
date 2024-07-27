@@ -344,11 +344,11 @@ usage(variant<bool, int, float> const&):
 ```cpp
 inline namespace x86_64 {
 struct entry {
-  static constexpr size_t N = 8u;       /// Max number JMPs (hardcoded)
+  static constexpr size_t N = 8u; /// Max number JMPs (hardcoded)
 
-  const void *self{};                   /// Identifier
-  void* memory{};                       /// Code memory (to be patched)
-  utility::array<u64, N - 1u> offset{}; /// JMP offsets
+  const void *self{};             /// Identifier
+  void* memory{};                 /// Code memory (to be patched)
+  array<u64, N - 1u> offset{};    /// JMP offsets
 
   [[nodiscard]] static inline auto begin() noexcept -> const entry*;
   [[nodiscard]] static inline auto end() noexcept -> const entry*;
