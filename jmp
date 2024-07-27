@@ -11,7 +11,7 @@
 [![Boost Licence](http://img.shields.io/badge/license-boost-blue.svg)](http://www.boost.org/LICENSE_1_0.txt)
 [![Version](https://badge.fury.io/gh/qlibs%2Fjmp.svg)](https://github.com/qlibs/jmp/releases)
 [![build](https://img.shields.io/badge/build-blue.svg)](https://godbolt.org/z/zxdzjMcGq)
-[![Try it online](https://img.shields.io/badge/try%20it-online-blue.svg)](https://godbolt.org/z/TrPd91PG5)
+[![Try it online](https://img.shields.io/badge/try%20it-online-blue.svg)](https://godbolt.org/z/5dcs4zW5h)
 
 ---------------------------------------
 
@@ -42,7 +42,7 @@
 
 ### Overview
 
-> `static_branch<bool>` (https://godbolt.org/z/TrPd91PG5)
+> `static_branch<bool>` (https://godbolt.org/z/5dcs4zW5h)
 
 ```cpp
 /**
