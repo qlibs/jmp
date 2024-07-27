@@ -48,7 +48,7 @@
 /**
  * constexpr minimal overhead static branch changed at run-time via code patching
  */
-constexpr jmp::static_branch<bool> semi_runtime_branch = false;
+constexpr jmp::static_branch<bool> static_bool = false;
 
 /**
  * Note: `fn` can be inline/noinline/constexpr/etc.
@@ -58,7 +58,7 @@ constexpr jmp::static_branch<bool> semi_runtime_branch = false;
  * [[gnu::always_inline]] void fn()
  */
 void fn() {
-  if (semi_runtime_branch) { // [[likely]] / [[unlikely]]
+  if (static_bool) { // [[likely]], [[unlikely]]
     std::puts("taken");
   } else {
     std::puts("not taken");
@@ -72,7 +72,7 @@ int main() {
 
   fn(); // not taken
 
-  semi_runtime_branch = true;
+  static_bool = true;
   fn(); // taken
 }
 ```
@@ -92,7 +92,7 @@ main: // $CXX -O3
   jmp puts
   ret
 
-  call semi_runtime_branch.operator=(true)
+  call static_bool.operator=(true)
 
 // fn (inlined)
   jmp .Ltmp1 // code patching (nop->jmp)
@@ -109,10 +109,10 @@ main: // $CXX -O3
 ```
 
 ```cpp
-constexpr jmp::static_branch<bool> semi_runtime_branch = false;
+constexpr jmp::static_branch<bool> static_bool = false;
 
 void fn() {
-  if (semi_runtime_branch) {
+  if (static_bool) {
     throw;
   } else {
     std::puts("taken");
@@ -120,20 +120,20 @@ void fn() {
 }
 
 fn(): // https://godbolt.org/z/jvKGdPMWK
-// semi_runtime_branch = false;
+// static_bool = false;
   [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
    1      0     0.25                        nop
    1      1     0.33                        lea   rdi, [rip + .L.str]
    1      1     0.50                        jmp   puts
-   1      1     1.00           *            .LBB0_1: push  rax
+   1      1     1.00           *            .LBB0_1: push rax
    1      1     0.50                        call  __cxa_rethrow@PLT
 
-// semi_runtime_branch = true;
+// static_bool = true;
   [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
    1      1     0.50                        jmp   .LBB0_1
    1      1     0.50                        lea   rdi, [rip + .L.str]
    1      1     0.50                        jmp   puts
-   3      2     1.00           *            .LBB0_1: push  rax
+   3      2     1.00           *            .LBB0_1: push rax
    4      3     1.00                        call  __cxa_rethrow@PLT
 
 [1]: #uOps   [2]: Latency  [3]: RThroughput
@@ -141,10 +141,10 @@ fn(): // https://godbolt.org/z/jvKGdPMWK
 ```
 
 ```cpp
-bool runtime_branch = false;
+bool dynamic_bool = false;
 
 void fn() {
-  if (runtime_branch) {
+  if (dynamic_bool) {
     throw;
   } else {
     std::puts("taken");
@@ -152,22 +152,22 @@ void fn() {
 }
 
 fn(): // https://godbolt.org/z/jvKGdPMWK
-// runtime_branch = false;
+// dynamic_bool = false;
   [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-   2      5     0.50    *                   cmp   byte ptr [rip + runtime_branch], 1
+   2      5     0.50    *                   cmp   byte ptr [rip + dynamic_bool], 1
    1      1     0.25                        je    .LBB0_1
    1      1     0.25                        lea   rdi, [rip + .L.str]
    1      1     0.25                        jmp   puts
-   1      1     0.50           *            .LBB0_1: push  rax
+   1      1     0.50           *            .LBB0_1: push rax
    1      1     0.25                        call  __cxa_rethrow@PLT
 
-// runtime_branch = true;
+// dynamic_bool = true;
   [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-   2      5     0.50    *                   cmp   byte ptr [rip + runtime_branch], 1
+   2      5     0.50    *                   cmp   byte ptr [rip + dynamic_bool], 1
    1      1     0.25                        je    .LBB0_1
    1      1     0.25                        lea   rdi, [rip + .L.str]
    1      1     0.25                        jmp   puts
-   1      1     0.50           *            .LBB0_1: push  rax
+   1      1     0.50           *            .LBB0_1: push rax
    1      1     0.25                        call  __cxa_rethrow@PLT
 
 [1]: #uOps   [2]: Latency  [3]: RThroughput
@@ -179,10 +179,10 @@ fn(): // https://godbolt.org/z/jvKGdPMWK
 > `static_branch<int>` (https://godbolt.org/z/sP8qzMMnj)
 
 ```cpp
-constexpr jmp::static_branch<int> semi_runtime_branch = 0;
+constexpr jmp::static_branch<int> static_int = 0;
 
 void fn() {
-  switch (semi_runtime_branch) {
+  switch (static_int) {
     default: return;
     case 0: std::puts("0"); return;
     case 1: std::puts("1"); return;
@@ -197,10 +197,10 @@ int main() {
 
   fn(); // 0
 
-  semi_runtime_branch = 1;
+  static_int = 1;
   fn(); // 1
 
-  semi_runtime_branch = 2;
+  static_int = 2;
   fn(); // 2
 }
 ```
@@ -225,10 +225,10 @@ main:
 
   fn() // 0
 
-  call semi_runtime_branch.operator=(1)
+  call static_int.operator=(1)
   fn() // 1
 
-  call semi_runtime_branch.operator=(2)
+  call static_int.operator=(2)
   fn() // 2
 
 .LC0: .asciz "0"
@@ -344,7 +344,7 @@ usage(variant<bool, int, float> const&):
 ```cpp
 inline namespace x86_64 {
 struct entry {
-  static constexpr size_t offsets = 8u; /// Max number JMP offsets (hardcoded)
+  static constexpr size_t offsets = 8u; /// Max number of JMP offsets
   static constexpr size_t size = 5u;    /// sizeof(nop/jmp instruction)
                                         ///
   const void *self{};                   /// Identifier
