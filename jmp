@@ -42,22 +42,22 @@
 
 ### Overview
 
-> `static_branch` (https://godbolt.org/z/nx8G7v6zE)
+> `static_branch<bool>` (https://godbolt.org/z/nx8G7v6zE)
 
 ```cpp
 /**
- * constexpr minimal overhead static bool changed at run-time via code patching
+ * constexpr minimal overhead static branch changed at run-time via code patching
  */
-constexpr jmp::static_branch semi_runtime_branch = false;
+constexpr jmp::static_branch<bool> semi_runtime_branch = false;
 
 /**
- * Note: `fun` can be inline/noinline/constexpr/etc.
- * constexpr void fun();
- * inline void fun();
- * [[gnu::noinline]] void fun()
- * [[gnu::always_inline]] void fun()
+ * Note: `fn` can be inline/noinline/constexpr/etc.
+ * constexpr void fn();
+ * inline void fn();
+ * [[gnu::noinline]] void fn()
+ * [[gnu::always_inline]] void fn()
  */
-void fun() {
+void fn() {
   if (semi_runtime_branch) {
     std::puts("taken");
   } else {
@@ -66,15 +66,17 @@ void fun() {
 }
 
 int main() {
-  std::ignore = jmp::static_branch::init(); // enables run-time code patching
+  if (not jmp::init()) { // enables run-time code patching
+    return -1; // can't change permissions for code pages
+  }
 
-  fun(); // not taken
+  fn(); // not taken
 
   semi_runtime_branch = true;
-  fun(); // taken
+  fn(); // taken
 
   semi_runtime_branch = false;
-  fun(); // not taken
+  fn(); // not taken
 }
 ```
 
@@ -111,6 +113,41 @@ main: // $CXX -O3
 
 ----
 
+> `static_branch<int>` (https://godbolt.org/z/nx8G7v6zE)
+
+```cpp
+constexpr jmp::static_branch<int> semi_runtime_branch = 0;
+
+void fn() {
+  switch (semi_runtime_branch) {
+    default: return;
+    case 0 : std::puts("0"); return;
+    case 1 : std::puts("1"); return;
+    case 2 : std::puts("2"); return;
+  }
+}
+
+int main() {
+  if (not jmp::init()) { // enables run-time code patching
+    return -1; // can't change permissions for code pages
+  }
+
+  fn(); // 0
+
+  semi_runtime_branch = 1;
+  fn(); // 1
+
+  semi_runtime_branch = 2;
+  fn(); // 2
+}
+```
+
+```cpp
+main: // $CXX -O3
+```
+
+----
+
 ### Examples
 
 > `variant` (https://godbolt.org/z/breWs5xfb) | (https://wg21.link/P2996)
@@ -125,8 +162,7 @@ class variant {
       std::array match{std::is_same_v<Ts, std::remove_cvref_t<T>>...};
       return std::ranges::find(match, true)-match.begin();
     }();
-    for (auto& option : options) option = false;
-    options[index] = true;
+    index_ = index;
     std::construct_at(&storage_.[:
       nonstatic_data_members_of(^storage)[index+1u] :], std::forward<T>(t)
     );
@@ -154,8 +190,7 @@ private:
     std::meta::data_member_spec(^empty, {.name = "empty"}),
     std::meta::data_member_spec(^Ts)...
   })));
-  template<class...> static constexpr auto false_v = false;
-  static constexpr std::array options{jmp::static_branch{false_v<Ts>}...};
+  static constexpr jmp::static_branch<u32> index_ = 0u;
   storage storage_{.empty={}};
 };
 ```
@@ -170,7 +205,7 @@ void usage(const variant<bool, int, float>& v) {
 }
 
 int main() {
-  std::ignore = jmp::static_branch::init();
+  std::ignore = jmp::init();
 
   variant<bool, int, float> v{};
 
@@ -187,13 +222,6 @@ int main() {
 
 ```cpp
 usage(variant<bool, int, float> const&):
-  lea rdi, [rip + .L.str.1]
-  nop # code patching (nop->jmp)
-  lea rdi, [rip + .L.str.2]
-  nop # code patching (jmp->jmp)
-  lea rdi, [rip + .L.str.3]
-  nop # code patching (jmp->jmp)
-  jmp puts
 
 .L.str.1: .asciz  "bool"
 .L.str.2: .asciz  "int"
@@ -205,70 +233,59 @@ usage(variant<bool, int, float> const&):
 ### API
 
 ```cpp
-/**
- * Minimal overhead (via code patching) static bool
- */
-class static_branch final {
- public:
-   using entry = struct {
-     void *self{};   /// identifier (this pointer of the branch)
-     void* memory{}; /// code memory (to be patched)
-     u64 offset{};   /// jmp offset
-   };
+inline namespace x86_64 {
+struct entry {
+  static constexpr size_t N = 8u;       /// Max number JMPs (hardcoded)
 
+  const void *self{};                   /// Identifier
+  void* memory{};                       /// Code memory (to be patched)
+  utility::array<u64, N - 1u> offset{}; /// JMP offsets
+
+  [[nodiscard]] static inline auto begin() noexcept -> const entry*;
+  [[nodiscard]] static inline auto end() noexcept -> const entry*;
+};
+
+/**
+ * Minimal overhead (via code patching) static branch
+ */
+template<class T>
+  requires requires(T t) { reinterpret_cast<T>(t); }
+struct static_branch final {
   /**
-   * Creates empty class (static_assert(sizeof(static_branch) == 1u))
-   * @param direction initial branch direction
-   * Note: direction should be false by default
-   *       for better performance: { false: nop, true: jmp }
+   * Creates empty class (static_assert(sizeof(static_branch<T>) == 1u))
+   * @param direction initial branch direction (direction: should be T{})
    */
   constexpr explicit(false) static_branch(const auto direction) noexcept
-    requires requires { bool(direction); };
+    requires requires { T(direction); };
+
   constexpr static_branch(const static_branch&) noexcept = delete;
   constexpr static_branch(static_branch&&) noexcept = delete;
-  constexpr auto operator=(const static_branch&) noexcept = delete;
-  constexpr auto operator=(static_branch&&) noexcept = delete;
-
-  /**
-   * Makes required pages writable for code patching
-   * Note: Must be called before chaning the branch direction (`branch = true/false`)
-   *       Should be called only once per application
-   * @param page_size page size (default: sysconf(_SC_PAGESIZE))
-   * @param permissions protect permissions (default: PROT_READ | PROT_WRITE | PROT_EXEC)
-   * @return true if succesful, false on error (errno is set to indicate the error)
-   */
-  [[nodiscard]] static constexpr auto init(const u64 page_size = sysconf(_SC_PAGESIZE),
-                                           const u64 permissions = 0b111) noexcept -> bool;
+  constexpr auto& operator=(const static_branch&) noexcept = delete;
+  constexpr auto& operator=(static_branch&&) noexcept = delete;
 
   /**
    * Updates branch direction
    * @param direction new branch direction
    */
-  constexpr void operator=(const auto direction) const noexcept
-    requires requires { bool(direction); };
+  constexpr const auto& operator=(const auto direction) const noexcept
+    requires requires { T(direction); };
 
   /**
    * Updates branch direction
    * @param direction new branch direction for specific entry `pair{direction, entry}`
    */
-  constexpr void operator=(const auto direction_entry) const noexcept
-    requires requires { bool(direction_entry.first); direction_entry.second.offset; };
+  constexpr const auto& operator=(const auto direction_entry) const noexcept
+    requires requires { T(direction_entry.first); direction_entry.second.offset; };
 
-  /**
-   * Returns branch direction
-   * @return current branch direction
-   */
-  [[gnu::always_inline]] [[nodiscard]] inline explicit(true) operator bool() const noexcept;
-
-  [[nodiscard]] static constexpr auto begin() noexcept -> const entry*;
-  [[nodiscard]] static constexpr auto end() noexcept -> const entry*;
+  [[gnu::always_inline]] [[nodiscard]] inline explicit(false) operator T() const noexcept;
 };
+} // namespace x86_64
 ```
 
 > Configuration
 
 ```cpp
-#define $JMP 3'0'0 // Current library version (SemVer)
+#define $JMP 4'0'0 // Current library version (SemVer)
 ```
 
 ---
@@ -285,7 +302,7 @@ class static_branch final {
   Example
 
     ```cpp
-    constexpr jmp::static_branch b = false;
+    constexpr jmp::static_branch<bool> b = false;
 
     if (b) {
       return 42;
@@ -347,7 +364,7 @@ class static_branch final {
     CPMAddPackage(
       Name jmp
       GITHUB_REPOSITORY qlibs/jmp
-      GIT_TAG v3.0.0
+      GIT_TAG v4.0.0
     )
     add_library(mp INTERFACE)
     target_include_directories(mp SYSTEM INTERFACE ${mp_SOURCE_DIR})
@@ -366,11 +383,13 @@ class static_branch final {
 #else
 #pragma GCC system_header
 #ifndef $JMP
-#define $JMP 3'0'0 // SemVer
+#define $JMP 4'0'0 // SemVer
 
 extern "C" int mprotect(void*, __SIZE_TYPE__, int);
+extern "C" void* __start___x86_jmp [[gnu::section("__x86_jmp")]];
+extern "C" void* __stop___x86_jmp [[gnu::section("__x86_jmp")]];
 
-namespace jmp::inline v3_0_0 {
+namespace jmp::inline v4_0_0 {
 using u8  = __UINT8_TYPE__;
 using u16 = __UINT16_TYPE__;
 using u32 = __UINT32_TYPE__;
@@ -379,116 +398,110 @@ using size_t = __SIZE_TYPE__;
 
 namespace utility {
 template<class T, size_t N>
-struct array {
+struct array final {
   T data[N]{};
   [[nodiscard]] constexpr const auto& operator[](size_t I) const { return data[I]; }
   static constexpr auto size() { return N; }
 };
-template<class T, class... Ts> array(T, Ts...) -> array<T, 1u + sizeof...(Ts)>;
 } // utility
-
-namespace detail {
-struct entry {
-  void *self{};   /// identifier
-  void* memory{}; /// code memory (to be patched)
-  u64 offset{};   /// jmp offset
-};
-extern "C" entry __start___jmp [[gnu::section("__jmp")]];
-extern "C" entry __stop___jmp [[gnu::section("__jmp")]];
-} // detail
 
 #if defined(__x86_64__)
 inline namespace x86_64 {
-/**
- * Minimal overhead (via code patching) static bool
- */
-class static_branch final {
+struct entry {
   using uop_t = utility::array<u8, 5u>;
   static constexpr uop_t NOP{0x0f, 0x1f, 0x44, 0x00, 0x00}; /// https://www.felixcloutier.com/x86/nop
-  struct [[gnu::packed]] JMP{ u8 op{0xe9}; u32 offset; };   /// https://www.felixcloutier.com/x86/jmp
+  struct [[gnu::packed]] JMP{u8 op{0xe9}; u32 offset;};     /// https://www.felixcloutier.com/x86/jmp
   static_assert(sizeof(NOP) == sizeof(JMP));
 
- public:
-  using entry = detail::entry;
+  static constexpr size_t N = 8u;       /// Max number JMPs (hardcoded)
+  const void *self{};                   /// Identifier
+  void* memory{};                       /// Code memory (to be patched)
+  utility::array<u64, N - 1u> offset{}; /// JMP offsets
 
+  [[nodiscard]] static inline auto begin() noexcept -> const entry* { return (const entry*)&__start___x86_jmp; }
+  [[nodiscard]] static inline auto end() noexcept -> const entry* { return (const entry*)&__stop___x86_jmp; }
+};
+
+/**
+ * Minimal overhead (via code patching) static branch
+ */
+template<class T>
+  requires requires(T t) { reinterpret_cast<T>(t); }
+struct static_branch final {
   /**
-   * Creates empty class (static_assert(sizeof(static_branch) == 1u))
-   * @param direction initial branch direction (direction: should be false)
+   * Creates empty class (static_assert(sizeof(static_branch<T>) == 1u))
+   * @param direction initial branch direction (direction: should be T{})
    */
-  constexpr explicit(false) static_branch(const auto direction) noexcept requires requires { bool(direction); } {
-    void failed(); if (direction) failed(); /// direction should be false by default for better performance: { false: nop, true: jmp }
+  constexpr explicit(false) static_branch(const auto direction) noexcept requires requires { T(direction); } {
+    void failed(); if (bool(direction)) failed(); /// direction should be set to T{} by default for better performance: { 0: nop, 1..N: jmp }
   }
   constexpr static_branch(const static_branch&) noexcept = delete;
   constexpr static_branch(static_branch&&) noexcept = delete;
-  constexpr auto operator=(const static_branch&) noexcept = delete;
-  constexpr auto operator=(static_branch&&) noexcept = delete;
-
-  /**
-   * Makes required pages writable for code patching
-   * Note: Must be called before chaning the branch direction (`branch = true/false`)
-   *       Should be called only once per application
-   * @param page_size page size (default: sysconf(_SC_PAGESIZE))
-   * @param permissions protect permissions (default: PROT_READ | PROT_WRITE | PROT_EXEC)
-   * @return true if succesful, false on error (errno is set to indicate the error)
-   */
-  [[nodiscard]] static inline auto init(const u64 page_size = 4096u, const u64 permissions = 0b111) noexcept -> bool {
-    for (auto entry = begin(); entry != end(); ++entry) {
-      const auto memory = ((u64)entry->memory & ~(page_size - 1u));
-      if (mprotect((void*)memory, sizeof(uop_t), permissions)) return false;
-    }
-    return true;
-  }
+  constexpr auto& operator=(const static_branch&) noexcept = delete;
+  constexpr auto& operator=(static_branch&&) noexcept = delete;
 
   /**
    * Updates branch direction
    * @param direction new branch direction
    */
-  constexpr void operator=(const auto direction) const noexcept
-    requires requires { bool(direction); } {
-    JMP jmp{}; const uop_t* ops[]{&NOP, (const uop_t*)(&jmp)};
-    for (const auto& entry: *this) {
-      if (entry.self != this) continue;
-      jmp.offset = u32(entry.offset);
-      *static_cast<uop_t*>(entry.memory) = *ops[direction];
+  constexpr const auto& operator=(const auto direction) const noexcept
+    requires requires { T(direction); } {
+    entry::JMP jmp{}; const entry::uop_t* ops[]{&entry::NOP, (const entry::uop_t*)(&jmp)};
+    for (const auto* entry = entry::begin(); entry != entry::end(); ++entry) {
+      if (entry->self != this) continue;
+      jmp.offset = u32(entry->offset[direction - 1u]);
+      *static_cast<entry::uop_t*>(entry->memory) = *ops[bool(direction)];
     }
+    return *this;
   }
 
   /**
    * Updates branch direction
    * @param direction new branch direction for specific entry `pair{direction, entry}`
    */
-  constexpr void operator=(const auto direction_entry) const noexcept
-    requires requires { bool(direction_entry.first); direction_entry.second.offset; } {
+  constexpr const auto& operator=(const auto direction_entry) const noexcept
+    requires requires { T(direction_entry.first); direction_entry.second.offset; } {
     const auto& [direction, entry] = direction_entry;
-    const JMP jmp{.offset = u32(entry.offset)};
-    const uop_t* ops[]{&NOP, (const uop_t*)(&jmp)};
-    *static_cast<uop_t*>(entry.memory) = *ops[direction];
+    const entry::JMP jmp{.offset = u32(entry.offset)};
+    const entry::uop_t* ops[]{&entry::NOP, (const entry::uop_t*)(&jmp)};
+    *static_cast<entry::uop_t*>(entry.memory) = *ops[bool(direction)];
+    return *this;
   }
 
-  /**
-   * Returns branch direction
-   * @return current branch direction
-   */
-  [[gnu::always_inline]] [[nodiscard]] inline explicit(true) operator bool() const noexcept {
+  [[gnu::always_inline]] [[nodiscard]] inline explicit(false) operator T() const noexcept {
     asm volatile goto("0:"
       ".byte %c3, %c4, %c5, %c6, %c7 \n"
-      ".pushsection __jmp, \"aw\" \n"
+      ".pushsection __x86_jmp, \"aw\" \n"
       ".balign %c0 \n"
-      ".quad %c1, 0b, %l[true_] - (0b + %c2) \n"
+      ".quad %c1, 0b, %l[_1] - (0b + %c2), %l[_2] - (0b + %c2), %l[_3] - (0b + %c2), \
+                      %l[_4] - (0b + %c2), %l[_5] - (0b + %c2), %l[_6] - (0b + %c2), %l[_7] - (0b + %c2) \n"
       ".popsection \n"
       : : "i"(alignof(u64)),
           "i"(this),
-          "i"(sizeof(uop_t)),
-          "i"(NOP[0]), "i"(NOP[1]), "i"(NOP[2]), "i"(NOP[3]), "i"(NOP[4])
-      : : true_);
-    false_: return false;
-    true_:  return true;
+          "i"(sizeof(entry::uop_t)),
+          "i"(entry::NOP[0]), "i"(entry::NOP[1]), "i"(entry::NOP[2]), "i"(entry::NOP[3]), "i"(entry::NOP[4])
+      : : _1, _2, _3, _4, _5, _6, _7);
+    _0: return 0; _1: return 1; _2: return 2; _3: return 3;
+    _4: return 4; _5: return 5; _6: return 6; _7: return 7;
   }
-
-  [[nodiscard]] static constexpr auto begin() noexcept -> const entry* { return &detail::__start___jmp; }
-  [[nodiscard]] static constexpr auto end() noexcept  -> const entry* { return &detail::__stop___jmp; }
 };
 } // namespace x86_64
+
+/**
+ * Makes required pages writable for code patching
+ * Note: Must be called before changing the branch direction (`branch = ...`)
+ *       Should be called only once per application
+ * @param page_size page size (default: sysconf(_SC_PAGESIZE))
+ * @param permissions protect permissions (default: PROT_READ | PROT_WRITE | PROT_EXEC)
+ * @return true if succesful, false on error (errno is set to indicate the error)
+ */
+[[nodiscard]] static inline auto init(const u64 page_size = 4096u, const u64 permissions = 0b111) noexcept -> bool {
+  for (auto* entry = entry::begin(); entry != entry::end(); ++entry) {
+    const auto memory = ((u64)entry->memory & ~(page_size - 1u));
+    if (mprotect((void*)memory, sizeof(entry::uop_t), permissions)) return false;
+  }
+  return true;
+}
 #endif
 } // namespace jmp
 
@@ -498,28 +511,29 @@ static_assert(([] {
 
   // jmp::utility::array
   {
-    {
-      jmp::utility::array<int, 1> a{};
-      expect(1u == a.size());
-      expect(0 == a[0]);
-    }
-    {
-      jmp::utility::array a{1, 2, 3};
-      expect(3u == a.size());
-      expect(1 == a[0]);
-      expect(2 == a[1]);
-      expect(3 == a[2]);
-    }
+    jmp::utility::array<int, 1> a{};
+    expect(1u == a.size());
+    expect(0 == a[0]);
   }
 
   // jmp::static_branch
   {
-    static_assert(1u == sizeof(jmp::static_branch));
-    static_assert(not [](auto... ts) { return requires { jmp::static_branch{ts...}; }; }());
-    static_assert(not [](auto... ts) { return requires { jmp::static_branch{ts...}; }; }(jmp::static_branch{false}));
-    static_assert([](auto direction) { return requires { jmp::static_branch{direction}; }; }(false));
+    static_assert(1u == sizeof(jmp::static_branch<bool>));
+    static_assert(1u == sizeof(jmp::static_branch<jmp::u8>));
+    static_assert(1u == sizeof(jmp::static_branch<jmp::u16>));
+    static_assert(1u == sizeof(jmp::static_branch<jmp::u32>));
+    static_assert(1u == sizeof(jmp::static_branch<jmp::u64>));
+    static_assert(1u == sizeof(jmp::static_branch<jmp::size_t>));
+
+    static_assert(not [](auto... ts) { return requires { jmp::static_branch<bool>{ts...}; }; }());
+    static_assert(not [](auto... ts) { return requires { jmp::static_branch<bool>{ts...}; }; }(jmp::static_branch<bool>{false}));
+    static_assert([](auto direction) { return requires { jmp::static_branch<bool>{direction}; }; }(false));
+
+    static_assert(not [](auto... ts) { return requires { jmp::static_branch<jmp::u32>{ts...}; }; }());
+    static_assert(not [](auto... ts) { return requires { jmp::static_branch<jmp::u32>{ts...}; }; }(jmp::static_branch<jmp::u32>{0u}));
+    static_assert([](auto direction) { return requires { jmp::static_branch<jmp::u32>{direction}; }; }(0u));
   }
 }(), true));
 #endif // NTEST
 #endif // $JMP
-#endif // README
+#endif // READM
