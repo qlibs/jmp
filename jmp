@@ -108,6 +108,54 @@ main: // $CXX -O3
 .LC1: .asciz "taken"
 ```
 
+---
+
+```cpp
+// https://godbolt.org/z/jvKGdPMWK
+void fn() {
+  if (semi_runtime_branch) {
+    throw;
+  } else {
+    std::puts("taken");
+  }
+}
+```
+
+```cpp
+fn(): // constexpr jmp::static_branch<bool> semi_runtime_branch = false;
+  [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
+   1      0     0.25                        nop
+   1      1     0.33                        lea   rdi, [rip + .L.str]
+   1      1     0.50                        jmp   puts@PLT
+   1      1     1.00           *            push  rax
+   1      1     0.50                        call  __cxa_rethrow@PLT
+
+// semi_runtime_branch = true;
+  [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
+   1      1     0.50                        jmp   .LBB0_2
+   1      1     0.50                        lea   rdi, [rip + .L.str]
+   1      1     0.50                        jmp   puts@PLT
+   3      2     1.00           *            push  rax
+   4      3     1.00                        call  __cxa_rethrow@PLT
+
+[1]: #uOps   [2]: Latency  [3]: RThroughput
+[4]: MayLoad [5]: MayStore [6]: HasSideEffects (U)
+```
+
+```cpp
+fn(): // bool semi_runtime_branch = false;
+  [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
+   2      5     0.50    *                   cmp   byte ptr [rip + semi_runtime_branch], 1
+   1      1     0.25                        je    .LBB0_1
+   1      1     0.25                        lea   rdi, [rip + .L.str]
+   1      1     0.25                        jmp   puts@PLT
+   1      1     0.50           *            push  rax
+   1      1     0.25                        call  __cxa_rethrow@PLT
+
+[1]: #uOps   [2]: Latency  [3]: RThroughput
+[4]: MayLoad [5]: MayStore [6]: HasSideEffects (U)
+```
+
 ----
 
 > `static_branch<int>` (https://godbolt.org/z/sP8qzMMnj)
