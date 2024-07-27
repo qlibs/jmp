@@ -344,11 +344,12 @@ usage(variant<bool, int, float> const&):
 ```cpp
 inline namespace x86_64 {
 struct entry {
-  static constexpr size_t N = 8u; /// Max number JMPs (hardcoded)
-
-  const void *self{};             /// Identifier
-  void* memory{};                 /// Code memory (to be patched)
-  array<u64, N - 1u> offset{};    /// JMP offsets
+  static constexpr size_t offsets = 8u; /// Max number JMP offsets (hardcoded)
+  static constexpr size_t size = 5u;    /// sizeof(nop/jmp instruction)
+                                        ///
+  const void *self{};                   /// Identifier
+  void* memory{};                       /// Code memory (to be patched)
+  u64 offset[offsets - 1u]{};           /// JMP offsets
 
   [[nodiscard]] static inline auto begin() noexcept -> const entry*;
   [[nodiscard]] static inline auto end() noexcept -> const entry*;
@@ -505,27 +506,21 @@ using u32 = __UINT32_TYPE__;
 using u64 = __UINT64_TYPE__;
 using size_t = __SIZE_TYPE__;
 
-namespace utility {
-template<class T, size_t N>
-struct array final {
-  T data[N]{};
-  [[nodiscard]] constexpr const auto& operator[](size_t I) const { return data[I]; }
-  static constexpr auto size() { return N; }
-};
-} // utility
-
 #if defined(__x86_64__)
 inline namespace x86_64 {
 struct entry {
-  using uop_t = utility::array<u8, 5u>;
+  static constexpr size_t offsets = 8u; /// Max number JMP offsets (hardcoded)
+  static constexpr size_t size = 5u;    /// sizeof(nop/jmp instruction)
+  using uop_t = struct uop {
+    u8 data[size]; [[nodiscard]] constexpr const auto& operator[](size_t I) const { return data[I]; }
+  };
   static constexpr uop_t NOP{0x0f, 0x1f, 0x44, 0x00, 0x00}; /// https://www.felixcloutier.com/x86/nop
   struct [[gnu::packed]] JMP{u8 op{0xe9}; u32 offset;};     /// https://www.felixcloutier.com/x86/jmp
   static_assert(sizeof(NOP) == sizeof(JMP));
 
-  static constexpr size_t N = 8u;       /// Max number JMPs (hardcoded)
-  const void *self{};                   /// Identifier
-  void* memory{};                       /// Code memory (to be patched)
-  utility::array<u64, N - 1u> offset{}; /// JMP offsets
+  const void *self{};         /// Identifier
+  void* memory{};             /// Code memory (to be patched)
+  u64 offset[offsets - 1u]{}; /// JMP offsets
 
   [[nodiscard]] static inline auto begin() noexcept -> const entry* { return (const entry*)&__start___x86_jmp; }
   [[nodiscard]] static inline auto end() noexcept -> const entry* { return (const entry*)&__stop___x86_jmp; }
@@ -570,10 +565,11 @@ struct static_branch final {
    */
   constexpr const auto& operator=(const auto direction_entry) const noexcept
     requires requires { T(direction_entry.first); direction_entry.second.offset; } {
+    struct uop { entry::uop_t _; };
     const auto& [direction, entry] = direction_entry;
     const entry::JMP jmp{.offset = u32(entry.offset)};
     const entry::uop_t* ops[]{&entry::NOP, (const entry::uop_t*)(&jmp)};
-    *static_cast<entry::uop_t*>(entry.memory) = *ops[bool(direction)];
+    *static_cast<uop>(entry.memory) = *ops[bool(direction)];
     return *this;
   }
 
@@ -618,13 +614,6 @@ struct static_branch final {
 static_assert(([] {
   constexpr auto expect = [](bool cond) { if (not cond) { void failed(); failed(); } };
 
-  // jmp::utility::array
-  {
-    jmp::utility::array<int, 1> a{};
-    expect(1u == a.size());
-    expect(0 == a[0]);
-  }
-
   // jmp::static_branch
   {
     static_assert(1u == sizeof(jmp::static_branch<bool>));
@@ -646,3 +635,28 @@ static_assert(([] {
 #endif // NTEST
 #endif // $JMP
 #endif // READM
+#include <cstdio>
+
+constexpr jmp::static_branch<bool> semi_runtime_branch = false;
+
+void fun() {
+  if (semi_runtime_branch) {
+    std::puts("taken");
+  } else {
+    std::puts("not taken");
+  }
+}
+
+int main() {
+  if (not jmp::init()) { // enables run-time code patching
+    return -1; // can't change permissions for code pages
+  }
+
+  fun(); // not taken
+
+  semi_runtime_branch = true;
+  fun(); // taken
+
+  semi_runtime_branch = false;
+  fun(); // not taken
+}
