@@ -118,9 +118,9 @@ constexpr jmp::static_branch<int> semi_runtime_branch = 0;
 void fn() {
   switch (semi_runtime_branch) {
     default: return;
-    case 0 : std::puts("0"); return;
-    case 1 : std::puts("1"); return;
-    case 2 : std::puts("2"); return;
+    case 0: std::puts("0"); return;
+    case 1: std::puts("1"); return;
+    case 2: std::puts("2"); return;
   }
 }
 
