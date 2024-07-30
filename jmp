@@ -348,19 +348,6 @@ usage(variant<bool, int, float> const&):
 ### API
 
 ```cpp
-inline namespace x86_64 {
-struct entry {
-  static constexpr size_t offsets = 8u; /// Max number of JMP offsets
-  static constexpr size_t size = 5u;    /// sizeof(nop/jmp instruction)
-
-  const void *self{};                   /// Identifier
-  void* memory{};                       /// Code memory (to be patched)
-  u64 offset[offsets - 1u]{};           /// JMP offsets
-
-  [[nodiscard]] static inline auto begin() noexcept -> const entry*;
-  [[nodiscard]] static inline auto end() noexcept -> const entry*;
-};
-
 /**
  * Minimal overhead (via code patching) static branch
  */
