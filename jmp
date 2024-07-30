@@ -382,7 +382,6 @@ struct static_branch final {
 
   [[gnu::always_inline]] [[nodiscard]] inline explicit(false) operator T() const noexcept;
 };
-} // namespace x86_64
 ```
 
 > Configuration
