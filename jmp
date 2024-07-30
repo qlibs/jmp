@@ -84,6 +84,7 @@ main: // $CXX -O3
 
 // fn (inlined)
   nop
+.Ltmp0:
   mov edi, OFFSET FLAT:.LC0
   jmp puts
   ret
@@ -96,6 +97,7 @@ main: // $CXX -O3
 
 // fn (inlined)
   jmp .Ltmp1 // code patching (nop->jmp)
+.Ltmp0:
   mov edi, OFFSET FLAT:.LC0
   jmp puts
   ret
@@ -208,6 +210,7 @@ int main() {
 ```cpp
 fn: // $CXX -O3 -fno-inline
   nop # patching (nop->jmp)
+.Ltmp0:
   mov edi, OFFSET FLAT:.LC0
   jmp puts
   ret
@@ -240,7 +243,7 @@ main:
 
 ### Examples
 
-> `variant` (https://godbolt.org/z/4Y8f1zWqE) | (https://wg21.link/P2996)
+> `variant` (https://godbolt.org/z/d6sf8EcWj) | (https://wg21.link/P2996)
 
 ```cpp
 template<class... Ts>
@@ -302,7 +305,9 @@ void usage(const variant<bool, int, float>& v) {
 }
 
 int main() {
-  std::ignore = jmp::init();
+  if (not jmp::init()) { // enables run-time code patching
+    return -1; // can't change permissions for code pages
+  }
 
   variant<bool, int, float> v{};
 
@@ -320,6 +325,7 @@ int main() {
 ```cpp
 usage(variant<bool, int, float> const&):
   nop # patching (nop->jmp)
+.Ltmp0:
   mov edi, OFFSET FLAT:.LC0
   jmp puts
   ret
@@ -346,7 +352,7 @@ inline namespace x86_64 {
 struct entry {
   static constexpr size_t offsets = 8u; /// Max number of JMP offsets
   static constexpr size_t size = 5u;    /// sizeof(nop/jmp instruction)
-                                        ///
+
   const void *self{};                   /// Identifier
   void* memory{};                       /// Code memory (to be patched)
   u64 offset[offsets - 1u]{};           /// JMP offsets
@@ -496,8 +502,8 @@ struct static_branch final {
 #define $JMP 4'0'0 // SemVer
 
 extern "C" int mprotect(void*, __SIZE_TYPE__, int);
-extern "C" void* __start___x86_jmp [[gnu::section("__x86_jmp")]];
-extern "C" void* __stop___x86_jmp [[gnu::section("__x86_jmp")]];
+extern "C" void* __start___jmp [[gnu::section("__jmp")]];
+extern "C" void* __stop___jmp [[gnu::section("__jmp")]];
 
 namespace jmp::inline v4_0_0 {
 using u8  = __UINT8_TYPE__;
@@ -522,8 +528,8 @@ struct entry {
   void* memory{};             /// Code memory (to be patched)
   u64 offset[offsets - 1u]{}; /// JMP offsets
 
-  [[nodiscard]] static inline auto begin() noexcept -> const entry* { return (const entry*)&__start___x86_jmp; }
-  [[nodiscard]] static inline auto end() noexcept -> const entry* { return (const entry*)&__stop___x86_jmp; }
+  [[nodiscard]] static inline auto begin() noexcept -> const entry* { return (const entry*)&__start___jmp; }
+  [[nodiscard]] static inline auto end() noexcept -> const entry* { return (const entry*)&__stop___jmp; }
 };
 
 /**
@@ -576,7 +582,7 @@ struct static_branch final {
   [[gnu::always_inline]] [[nodiscard]] inline explicit(false) operator T() const noexcept {
     asm volatile goto("0:"
       ".byte %c3, %c4, %c5, %c6, %c7 \n"
-      ".pushsection __x86_jmp, \"aw\" \n"
+      ".pushsection __jmp, \"aw\" \n"
       ".balign %c0 \n"
       ".quad %c1, 0b, %l[_1] - (0b + %c2), %l[_2] - (0b + %c2), %l[_3] - (0b + %c2), \
                       %l[_4] - (0b + %c2), %l[_5] - (0b + %c2), %l[_6] - (0b + %c2), %l[_7] - (0b + %c2) \n"
