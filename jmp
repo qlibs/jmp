@@ -154,7 +154,7 @@ void fn() {
 }
 
 fn(): // https://godbolt.org/z/jvKGdPMWK
-// dynamic_bool = false;
+  // dynamic_bool = false;
   [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
    2      5     0.50    *                   cmp   byte ptr [rip + dynamic_bool], 1
    1      1     0.25                        je    .LBB0_1
@@ -163,7 +163,7 @@ fn(): // https://godbolt.org/z/jvKGdPMWK
    1      1     0.50           *            .LBB0_1: push rax
    1      1     0.25                        call  __cxa_rethrow@PLT
 
-// dynamic_bool = true;
+  // dynamic_bool = true;
   [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
    2      5     0.50    *                   cmp   byte ptr [rip + dynamic_bool], 1
    1      1     0.25                        je    .LBB0_1
