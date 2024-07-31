@@ -80,6 +80,8 @@ int main() {
 ```cpp
 main: // $CXX -O3
 # init
+  xor eax, eax # return 0
+
 # fn(); // not taken
   nop
 .Ltmp0:
