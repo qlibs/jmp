@@ -111,6 +111,10 @@ main: // $CXX -O3
 .LC1: .asciz "taken"
 ```
 
+---
+
+> `static vs dynamic` branch (https://godbolt.org/z/jvKGdPMWK)
+
 ```cpp
 constexpr jmp::static_branch<bool> static_bool = false;
 
@@ -154,7 +158,7 @@ void fn() {
   }
 }
 
-fn(): // https://godbolt.org/z/jvKGdPMWK
+fn():
   // dynamic_bool = false;
   [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
    2      5     0.50    *                   cmp   byte ptr [rip + dynamic_bool], 1
