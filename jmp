@@ -113,7 +113,7 @@ main: // $CXX -O3
 
 ---
 
-> `static vs dynamic` branch (https://godbolt.org/z/jvKGdPMWK)
+> `static branch vs dynamic branch` (https://godbolt.org/z/jvKGdPMWK)
 
 ```cpp
 constexpr jmp::static_branch<bool> static_bool = false;
