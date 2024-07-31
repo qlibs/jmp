@@ -79,8 +79,9 @@ int main() {
 
 ```cpp
 main: // $CXX -O3
-  // ... init
-  // fn (inlined)
+  // init
+  // ...
+  // fn(); // not taken
   nop
 .Ltmp0:
   mov edi, OFFSET FLAT:.LC0
@@ -93,7 +94,7 @@ main: // $CXX -O3
 
   call static_bool.operator=(true)
 
-  // fn (inlined)
+  // fn();
   jmp .Ltmp1 // code patching (nop->jmp)
 .Ltmp0:
   mov edi, OFFSET FLAT:.LC0
