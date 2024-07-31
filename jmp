@@ -423,88 +423,69 @@ auto $jmp() -> int {                           # nop # code patching (nop->jmp)
 ```
 
 ```cpp
-auto $if_else(int i) -> int {                               # $if_else(int):
-  [[assume(i >= 0 and i <= 2)]];                            #   cmpl    $1, %edi
-  if (i == 0) {                                             #   movl    $77, %eax
-    return f1();                                            #   movl    $99, %ecx
-  } else if (i == 1) {                                      #   cmovel  %eax, %ecx
-    return f2();                                            #   testl   %edi, %edi
-  } else if (i == 2) {                                      #   movl    $42, %eax
-    return f3();                                            #   cmovnel %ecx, %eax
-  } else {                                                  #   retq
+auto $if_else(int i) -> int {                  # $if_else(int):
+  [[assume(i >= 0 and i <= 2)]];               #   cmpl    $1, %edi
+  if (i == 0) {                                #   movl    $77, %eax
+    return f1();                               #   movl    $99, %ecx
+  } else if (i == 1) {                         #   cmovel  %eax, %ecx
+    return f2();                               #   testl   %edi, %edi
+  } else if (i == 2) {                         #   movl    $42, %eax
+    return f3();                               #   cmovnel %ecx, %eax
+  } else {                                     #   retq
     std::unreachable();
   }
 }
 
-auto $switch_case(int i) -> int {                           # $switch_case(int):
-  [[assume(i >= 0 and i <= 2)]];                            #   movl    %edi, %eax
-  switch (i) {                                              #   leaq    .Lswitch.table.$switch(int)(%rip), %rcx
-    default: std::unreachable();                            #   movl    (%rcx,%rax,4), %eax
-    case 0: return f1();                                    #   retq
-    case 1: return f2();                                    # .Lswitch.table.$switch(int):
-    case 2: return f3();                                    #   .long   42
-  }                                                         #   .long   77
-}                                                           #   .long   99
+auto $switch_case(int i) -> int {             # $switch_case(int):
+  [[assume(i >= 0 and i <= 2)]];              #   movl    %edi, %eax
+  switch (i) {                                #   leaq    .Lswitch.table(%rip), %rcx
+    default: std::unreachable();              #   movl    (%rcx,%rax,4), %eax
+    case 0: return f1();                      #   retq
+    case 1: return f2();                      # .Lswitch.table(int):
+    case 2: return f3();                      #   .long   42
+  }                                           #   .long   77
+}                                             #   .long   99
 
-auto $switch_case_with_probability(int i) -> int {          # $switch_case_with_probability(int):
-  [[assume(i >= 0 and i <= 2)]];                            #   movl    %edi, %eax
-  switch (__builtin_expect_with_probability(i, 0, .9)) {    #   leaq    .Lswitch.table.$switch(int)(%rip), %rcx
-    default: std::unreachable();                            #   movl    (%rcx,%rax,4), %eax
-    case 0: return f1();                                    #   retq
-    case 1: return f2();                                    # .Lswitch.table.$switch(int):
-    case 2: return f3();                                    #   .long   42
-  }                                                         #   .long   77
-}                                                           #   .long   99
-
-auto $jump_table(int i) -> int {                            # $jump_table(int):
-  [[assume(i >= 0 and i <= 2)]];                            #   movl    %edi, %eax
-  static constexpr int (*dispatch[])(){                     #   leaq    $dispatch(%rip), %rcx
-    &f1, &f2, &f3                                           #   jmpq    *(%rcx,%rax,8) # call or jmp
-  };                                                        # $dispatch:
-  return dispatch[i]();                                     #  .quad   f1()
-}                                                           #  .quad   f2()
-                                                            #  .quad   f3()
-
-auto $jump_table_musttail(int i) -> int {                   # $jump_table_musttail(int):
-  [[assume(i >= 0 and i <= 2)]];                            #   movl    %edi, %eax
-  static constexpr int (*dispatch[])(int){                  #   leaq    $dispatch(%rip), %rcx
-    [](int) { return f1(); },                               #   jmpq    *(%rcx,%rax,8) # always jmp
-    [](int) { return f2(); },                               # $dispatch:
-    [](int) { return f3(); },                               #  .quad   f1()
-  };                                                        #  .quad   f2()
-  [[clang::musttail]] return dispatch[i](i);                #  .quad   f3()
+auto $jump_table(int i) -> int {              # $jump_table(int):
+  [[assume(i >= 0 and i <= 2)]];              #   movl    %edi, %eax
+  static constexpr int (*dispatch[])(int){    #   leaq    $dispatch(%rip), %rcx
+    [](int) { return f1(); },                 #   jmpq    *(%rcx,%rax,8) # always jmp
+    [](int) { return f2(); },                 # $dispatch:
+    [](int) { return f3(); },                 #  .quad   f1()
+  };                                          #  .quad   f2()
+  [[clang::musttail]] return dispatch[i](i);  #  .quad   f3()
 }
 
-auto $computed_goto(int i) -> int {                         # $computed_goto(int):
-  [[assume(i >= 0 and i <= 2)]];                            #   movl    %edi, %eax
-  static constexpr void* labels[]{&&L1, &&L2, &&L3};        #   leaq    $labels(%rip), %rcx
-  goto *labels[i];                                          #   jmpq    *(%rcx,%rax,8)
-  L1: return f1();                                          # .Ltmp35:
-  L2: return f2();                                          #   movl    $42, %eax
-  L3: return f3();                                          #   retq
-}                                                           # .Ltmp37:
-                                                            #   movl    $99, %eax
-                                                            #   retq
-                                                            # .Ltmp39:
-                                                            #   movl    $77, %eax
-                                                            #   retq
-                                                            #
-                                                            # $labels:
-                                                            #   .quad   .Ltmp35
-                                                            #   .quad   .Ltmp37
-                                                            #   .quad   .Ltmp39
+auto $computed_goto(int i) -> int {           # $computed_goto(int):
+  [[assume(i >= 0 and i <= 2)]];              #   movl    %edi, %eax
+  static constexpr void* labels[]{            #   leaq    $labels(%rip), %rcx
+    &&L1, &&L2, &&L3                          #   jmpq    *(%rcx,%rax,8)
+  };                                          # .Ltmp35:
+  goto *labels[i];                            #   movl    $42, %eax
+  L1: return f1();                            #   retq
+  L2: return f2();                            # .Ltmp37:
+  L3: return f3();                            #   movl    $99, %eax
+}                                             #   retq
+                                              # .Ltmp39:
+                                              #   movl    $77, %eax
+                                              #   retq
+                                              #
+                                              # $labels:
+                                              #   .quad   .Ltmp35
+                                              #   .quad   .Ltmp37
+                                              #   .quad   .Ltmp39
 
-static constexpr jmp::static_branch<int, 0, 2> branch = 0;  # $jmp():
-auto $jmp() -> int {                                        #   jmp .LBB21_0: # code patching
-  switch (branch) {                                         # .LBB21_0:
-    default: std::unreachable();                            #   movl    $42, %eax
-    case 0: return f1();                                    #   retq
-    case 1: return f2();                                    # .LBB21_1:
-    case 2: return f3();                                    #   movl    $99, %eax
-  }                                                         #   retq
-}                                                           # .LBB21_3:
-                                                            #   movl    $77, %eax
-                                                            #   retq
+jmp::static_branch<int, 0, 2> branch = 0;     # $jmp():
+auto $jmp() -> int {                          #   jmp .LBB21_0: # code patching
+  switch (branch) {                           # .LBB21_0:
+    default: std::unreachable();              #   movl    $42, %eax
+    case 0: return f1();                      #   retq
+    case 1: return f2();                      # .LBB21_1:
+    case 2: return f3();                      #   movl    $99, %eax
+  }                                           #   retq
+}                                             # .LBB21_3:
+                                              #   movl    $77, %eax
+                                              #   retq
 ```
 
 ---
