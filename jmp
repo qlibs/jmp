@@ -348,9 +348,9 @@ usage(variant<bool, int, float> const&):
 > Dispatching techniques (https://godbolt.org/z/cfKP9E8W9)
 
 ```cpp
-static auto f1() -> int { return 42; }
-static auto f2() -> int { return 77; }
-static auto f3() -> int { return 99; }
+auto f1() -> int { return 42; }
+auto f2() -> int { return 77; }
+auto f3() -> int { return 99; }
 ```
 
 ```cpp
