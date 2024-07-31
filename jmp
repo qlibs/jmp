@@ -10,7 +10,7 @@
 // -->
 [![Boost Licence](http://img.shields.io/badge/license-boost-blue.svg)](http://www.boost.org/LICENSE_1_0.txt)
 [![Version](https://badge.fury.io/gh/qlibs%2Fjmp.svg)](https://github.com/qlibs/jmp/releases)
-[![build](https://img.shields.io/badge/build-blue.svg)](https://godbolt.org/z/5jrTM6cqM)
+[![build](https://img.shields.io/badge/build-blue.svg)](https://godbolt.org/z/asbrK7br6)
 [![Try it online](https://img.shields.io/badge/try%20it-online-blue.svg)](https://godbolt.org/z/v8W3Pzbxd)
 
 ---------------------------------------
@@ -36,7 +36,7 @@
 
 ### Requirements
 
-- C++20 ([clang++15+, g++11+](https://en.cppreference.com/w/cpp/compiler_support)) / [x86-64](https://en.wikipedia.org/wiki/X86-64) / [Linux](https://en.wikipedia.org/wiki/Linux)
+- C++20 ([clang++10+, g++10+](https://en.cppreference.com/w/cpp/compiler_support)) / [x86-64](https://en.wikipedia.org/wiki/X86-64) / [Linux](https://en.wikipedia.org/wiki/Linux)
 
 ---
 
