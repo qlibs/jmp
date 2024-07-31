@@ -348,75 +348,81 @@ usage(variant<bool, int, float> const&):
 > Dispatching techniques (https://godbolt.org/z/cfKP9E8W9)
 
 ```cpp
-auto $if_else(bool b) -> int {                              # if_else(bool):
-  if (b) {                                                  #   testl   %edi, %edi
-    return f1();                                            #   movl    $42, %ecx
-  } else {                                                  #   movl    $77, %eax
-    return f2();                                            #   cmovnel %ecx, %eax # cmove or cmp
-  }                                                         #   retq
-}                                                           #
+static auto f1() -> int { return 42; }
+static auto f2() -> int { return 77; }
+static auto f3() -> int { return 99; }
+```
 
-auto $if_else_likely(bool b) -> int {                       # $if_else_likely(bool):
-  if (b) [[likely]] {                                       #   movl    $42, %eax # likely
-    return f1();                                            #   testl   %edi, %edi
-  } else {                                                  #   je      .LBB3_1
-    return f2();                                            #   retq
-  }                                                         # .LBB3_1:
-}                                                           #   movl    $77, %eax
-                                                            #   retq
+```cpp
+auto $if_else(bool b) -> int {                 # if_else(bool):
+  if (b) {                                     #   testl   %edi, %edi
+    return f1();                               #   movl    $42, %ecx
+  } else {                                     #   movl    $77, %eax
+    return f2();                               #   cmovnel %ecx, %eax # cmove or cmp
+  }                                            #   retq
+}                                              #
 
-auto $ternary_op(bool b) -> int {                           # $ternary_op(bool):
-  return b ? f1() : f2();                                   #   testl   %edi, %edi
-}                                                           #   movl    $42, %ecx
-                                                            #   movl    $77, %eax
-                                                            #   cmovnel %ecx, %eax # often cmove
-                                                            #   retq
+auto $if_else_likely(bool b) -> int {          # $if_else_likely(bool):
+  if (b) [[likely]] {                          #   movl    $42, %eax # likely
+    return f1();                               #   testl   %edi, %edi
+  } else {                                     #   je      .LBB3_1
+    return f2();                               #   retq
+  }                                            # .LBB3_1:
+}                                              #   movl    $77, %eax
+                                               #   retq
 
-auto $jump_table(bool b) -> int {                           # $jump_table(bool):
-  static constexpr int (*dispatch[])(){                     #  movl    %edi, %eax
-    &f1, &f2                                                #  leaq    $jump_table(bool)::dispatch(%rip), %rcx
-  };                                                        #  jmpq    *(%rcx,%rax,8) # or call
-  return dispatch[b]();                                     #
-}                                                           # $jump_table(bool)::dispatch:
-                                                            #  .quad   f1()
-                                                            #  .quad   f2()
+auto $ternary_op(bool b) -> int {              # $ternary_op(bool):
+  return b ? f1() : f2();                      #   testl   %edi, %edi
+}                                              #   movl    $42, %ecx
+                                               #   movl    $77, %eax
+                                               #   cmovnel %ecx, %eax # often cmove
+                                               #   retq
 
-auto $jump_table_musttail(bool b) -> int {                  # $jump_table_musttail(bool):
-  static constexpr int (*dispatch[])(bool){                 #   movl    %edi, %eax
-    [](bool) { return f1(); },                              #   leaq    $jump_table_musttail(bool)::dispatch(%rip), %rcx
-    [](bool) { return f2(); },                              #   jmpq    *(%rcx,%rax,8) # always jmp
-  };                                                        #
-  [[clang::musttail]] return dispatch[b](b);                # jump_table_musttail(bool)::dispatch:
-}                                                           #  .quad   $jump_table_musttail(bool)::$_0::__invoke(bool)
-                                                            #  .quad   $jump_table_musttail(bool)::$_1::__invoke(bool)
+auto $jump_table(bool b) -> int {              # $jump_table(bool):
+  static constexpr int (*dispatch[])(){        #  movl    %edi, %eax
+    &f1, &f2                                   #  leaq    $dispatch(%rip), %rcx
+  };                                           #  jmpq    *(%rcx,%rax,8) # or call
+  return dispatch[b]();                        #
+}                                              # $dispatch:
+                                               #  .quad   f1()
+                                               #  .quad   f2()
 
-auto $computed_goto(bool b) -> int {                        #
-  static constexpr void* labels[]{&&L1, &&L2};              # $computed_goto(bool):
-  goto *labels[b];                                          #   movl    %edi, %eax
-  L1: return f1();                                          #   leaq    $computed_goto(bool)::labels(%rip), %rcx
-  L2: return f2();                                          #   jmpq    *(%rcx,%rax,8)
-}                                                           # .Ltmp15:
-                                                            #   movl    $42, %eax
-                                                            #   retq
-                                                            # .Ltmp17:
-                                                            #   movl    $77, %eax
-                                                            #   retq
+auto $jump_table_musttail(bool b) -> int {     # $jump_table_musttail(bool):
+  static constexpr int (*dispatch[])(bool){    #   movl    %edi, %eax
+    [](bool) { return f1(); },                 #   leaq    $dispatch(%rip), %rcx
+    [](bool) { return f2(); },                 #   jmpq    *(%rcx,%rax,8) # always jmp
+  };                                           #
+  [[clang::musttail]] return dispatch[b](b);   # $dispatch:
+}                                              #  .quad   $f1::__invoke(bool)
+                                               #  .quad   $f2::__invoke(bool)
 
-static constexpr jmp::static_branch<bool> branch = false;   # $jmp():
-auto $jmp() -> int {                                        # nop # code patching (nop->jmp)
-  if (branch) {                                             # movl    $42, %eax
-    return f1();                                            # retq
-  } else {                                                  # movl    $77, %eax
-    return f2();                                            # retq
+auto $computed_goto(bool b) -> int {           #
+  static constexpr void* labels[]{&&L1, &&L2}; # $computed_goto(bool):
+  goto *labels[b];                             #   movl    %edi, %eax
+  L1: return f1();                             #   leaq    $labels(%rip), %rcx
+  L2: return f2();                             #   jmpq    *(%rcx,%rax,8)
+}                                              # .Ltmp15:
+                                               #   movl    $42, %eax
+                                               #   retq
+                                               # .Ltmp17:
+                                               #   movl    $77, %eax
+                                               #   retq
+                                               #
+                                               # $labels:
+                                               #   .quad   .Ltmp15
+                                               #   .quad   .Ltmp17
+
+jmp::static_branch<bool> branch = false;       # $jmp():
+auto $jmp() -> int {                           # nop # code patching (nop->jmp)
+  if (branch) {                                # movl    $42, %eax
+    return f1();                               # retq
+  } else {                                     # movl    $77, %eax
+    return f2();                               # retq
   }
 }
 ```
 
 ```cpp
-static auto f1() -> int { return 42; }
-static auto f2() -> int { return 77; }
-static auto f3() -> int { return 99; }
-
 auto $if_else(int i) -> int {                               # $if_else(int):
   [[assume(i >= 0 and i <= 2)]];                            #   cmpl    $1, %edi
   if (i == 0) {                                             #   movl    $77, %eax
@@ -452,18 +458,18 @@ auto $switch_case_with_probability(int i) -> int {          # $switch_case_with_
 
 auto $jump_table(int i) -> int {                            # $jump_table(int):
   [[assume(i >= 0 and i <= 2)]];                            #   movl    %edi, %eax
-  static constexpr int (*dispatch[])(){                     #   leaq    $jump_table(int)::dispatch(%rip), %rcx
+  static constexpr int (*dispatch[])(){                     #   leaq    $dispatch(%rip), %rcx
     &f1, &f2, &f3                                           #   jmpq    *(%rcx,%rax,8) # call or jmp
-  };                                                        # $jump_table(int)::dispatch:
+  };                                                        # $dispatch:
   return dispatch[i]();                                     #  .quad   f1()
 }                                                           #  .quad   f2()
                                                             #  .quad   f3()
 
 auto $jump_table_musttail(int i) -> int {                   # $jump_table_musttail(int):
   [[assume(i >= 0 and i <= 2)]];                            #   movl    %edi, %eax
-  static constexpr int (*dispatch[])(int){                  #   leaq    $jump_table_musttail(int)::dispatch(%rip), %rcx
+  static constexpr int (*dispatch[])(int){                  #   leaq    $dispatch(%rip), %rcx
     [](int) { return f1(); },                               #   jmpq    *(%rcx,%rax,8) # always jmp
-    [](int) { return f2(); },                               # $jump_table_musttail(int)::dispatch:
+    [](int) { return f2(); },                               # $dispatch:
     [](int) { return f3(); },                               #  .quad   f1()
   };                                                        #  .quad   f2()
   [[clang::musttail]] return dispatch[i](i);                #  .quad   f3()
@@ -471,7 +477,7 @@ auto $jump_table_musttail(int i) -> int {                   # $jump_table_mustta
 
 auto $computed_goto(int i) -> int {                         # $computed_goto(int):
   [[assume(i >= 0 and i <= 2)]];                            #   movl    %edi, %eax
-  static constexpr void* labels[]{&&L1, &&L2, &&L3};        #   leaq    $computed_goto(int)::labels(%rip), %rcx
+  static constexpr void* labels[]{&&L1, &&L2, &&L3};        #   leaq    $labels(%rip), %rcx
   goto *labels[i];                                          #   jmpq    *(%rcx,%rax,8)
   L1: return f1();                                          # .Ltmp35:
   L2: return f2();                                          #   movl    $42, %eax
@@ -482,6 +488,11 @@ auto $computed_goto(int i) -> int {                         # $computed_goto(int
                                                             # .Ltmp39:
                                                             #   movl    $77, %eax
                                                             #   retq
+                                                            #
+                                                            # $labels:
+                                                            #   .quad   .Ltmp35
+                                                            #   .quad   .Ltmp37
+                                                            #   .quad   .Ltmp39
 
 static constexpr jmp::static_branch<int, 0, 2> branch = 0;  # $jmp():
 auto $jmp() -> int {                                        #   jmp .LBB21_0: # code patching
