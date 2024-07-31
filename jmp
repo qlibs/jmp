@@ -436,56 +436,56 @@ auto $if_else(int i) -> int {                  # $if_else(int):
   }
 }
 
-auto $switch_case(int i) -> int {             # $switch_case(int):
-  [[assume(i >= 0 and i <= 2)]];              #   movl    %edi, %eax
-  switch (i) {                                #   leaq    .Lswitch.table(%rip), %rcx
-    default: std::unreachable();              #   movl    (%rcx,%rax,4), %eax
-    case 0: return f1();                      #   retq
-    case 1: return f2();                      # .Lswitch.table(int):
-    case 2: return f3();                      #   .long   42
-  }                                           #   .long   77
-}                                             #   .long   99
+auto $switch_case(int i) -> int {              # $switch_case(int):
+  [[assume(i >= 0 and i <= 2)]];               #   movl    %edi, %eax
+  switch (i) {                                 #   leaq    .Lswitch.table(%rip), %rcx
+    default: std::unreachable();               #   movl    (%rcx,%rax,4), %eax
+    case 0: return f1();                       #   retq
+    case 1: return f2();                       # .Lswitch.table(int):
+    case 2: return f3();                       #   .long   42
+  }                                            #   .long   77
+}                                              #   .long   99
 
-auto $jump_table(int i) -> int {              # $jump_table(int):
-  [[assume(i >= 0 and i <= 2)]];              #   movl    %edi, %eax
-  static constexpr int (*dispatch[])(int){    #   leaq    $dispatch(%rip), %rcx
-    [](int) { return f1(); },                 #   jmpq    *(%rcx,%rax,8) # always jmp
-    [](int) { return f2(); },                 # $dispatch:
-    [](int) { return f3(); },                 #  .quad   f1()
-  };                                          #  .quad   f2()
-  [[clang::musttail]] return dispatch[i](i);  #  .quad   f3()
+auto $jump_table(int i) -> int {               # $jump_table(int):
+  [[assume(i >= 0 and i <= 2)]];               #   movl    %edi, %eax
+  static constexpr int (*dispatch[])(int){     #   leaq    $dispatch(%rip), %rcx
+    [](int) { return f1(); },                  #   jmpq    *(%rcx,%rax,8) # always jmp
+    [](int) { return f2(); },                  # $dispatch:
+    [](int) { return f3(); },                  #  .quad   f1()
+  };                                           #  .quad   f2()
+  [[clang::musttail]] return dispatch[i](i);   #  .quad   f3()
 }
 
-auto $computed_goto(int i) -> int {           # $computed_goto(int):
-  [[assume(i >= 0 and i <= 2)]];              #   movl    %edi, %eax
-  static constexpr void* labels[]{            #   leaq    $labels(%rip), %rcx
-    &&L1, &&L2, &&L3                          #   jmpq    *(%rcx,%rax,8)
-  };                                          # .Ltmp35:
-  goto *labels[i];                            #   movl    $42, %eax
-  L1: return f1();                            #   retq
-  L2: return f2();                            # .Ltmp37:
-  L3: return f3();                            #   movl    $99, %eax
-}                                             #   retq
-                                              # .Ltmp39:
-                                              #   movl    $77, %eax
-                                              #   retq
-                                              #
-                                              # $labels:
-                                              #   .quad   .Ltmp35
-                                              #   .quad   .Ltmp37
-                                              #   .quad   .Ltmp39
+auto $computed_goto(int i) -> int {            # $computed_goto(int):
+  [[assume(i >= 0 and i <= 2)]];               #   movl    %edi, %eax
+  static constexpr void* labels[]{             #   leaq    $labels(%rip), %rcx
+    &&L1, &&L2, &&L3                           #   jmpq    *(%rcx,%rax,8)
+  };                                           # .Ltmp35:
+  goto *labels[i];                             #   movl    $42, %eax
+  L1: return f1();                             #   retq
+  L2: return f2();                             # .Ltmp37:
+  L3: return f3();                             #   movl    $99, %eax
+}                                              #   retq
+                                               # .Ltmp39:
+                                               #   movl    $77, %eax
+                                               #   retq
+                                               #
+                                               # $labels:
+                                               #   .quad   .Ltmp35
+                                               #   .quad   .Ltmp37
+                                               #   .quad   .Ltmp39
 
-jmp::static_branch<int, 0, 2> branch = 0;     # $jmp():
-auto $jmp() -> int {                          #   jmp .LBB21_0: # code patching
-  switch (branch) {                           # .LBB21_0:
-    default: std::unreachable();              #   movl    $42, %eax
-    case 0: return f1();                      #   retq
-    case 1: return f2();                      # .LBB21_1:
-    case 2: return f3();                      #   movl    $99, %eax
-  }                                           #   retq
-}                                             # .LBB21_3:
-                                              #   movl    $77, %eax
-                                              #   retq
+jmp::static_branch<int, 0, 2> branch = 0;      # $jmp():
+auto $jmp() -> int {                           #   jmp .LBB21_0: # code patching
+  switch (branch) {                            # .LBB21_0:
+    default: std::unreachable();               #   movl    $42, %eax
+    case 0: return f1();                       #   retq
+    case 1: return f2();                       # .LBB21_1:
+    case 2: return f3();                       #   movl    $99, %eax
+  }                                            #   retq
+}                                              # .LBB21_3:
+                                               #   movl    $77, %eax
+                                               #   retq
 ```
 
 ---
