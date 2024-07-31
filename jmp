@@ -684,7 +684,7 @@ template<size_t N> struct [[gnu::packed]] entry {
   u64 size{};         /// sizeof(entry<N>)
   void* code{};       /// code memory (to be patched)
   u64 len{};          /// code length
-  const void* self{}; /// self identifierd (this)
+  const void* self{}; /// self identifier
   u32 offsets[N]{};   /// jmp offsets
 };
 
