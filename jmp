@@ -122,7 +122,7 @@ void fn() {
 }
 
 fn(): // https://godbolt.org/z/jvKGdPMWK
-// static_bool = false;
+  // static_bool = false;
   [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
    1      0     0.25                        nop
    1      1     0.33                        lea   rdi, [rip + .L.str]
@@ -130,7 +130,7 @@ fn(): // https://godbolt.org/z/jvKGdPMWK
    1      1     1.00           *            .LBB0_1: push rax
    1      1     0.50                        call  __cxa_rethrow@PLT
 
-// static_bool = true;
+  // static_bool = true;
   [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
    1      1     0.50                        jmp   .LBB0_1
    1      1     0.50                        lea   rdi, [rip + .L.str]
