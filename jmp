@@ -622,6 +622,15 @@ struct static_branch<T, Min, Max> final {
       ret
     ```
 
+- What platforms are supported?
+
+  > Only x86_64 is currently supported but the technique is compatible with other platforms as proven by https://docs.kernel.org/staging/static-keys.html.
+
+- What is the cost of switching the branch?
+
+  > It's memcpy of (5 bytes for static_branch<bool> and 4 bytes for static_branch<T>) * number of inlined version.
+    In case of [[gnu::noinline]] the cost is a single memcpy otherwise it will be a loop over all inlined versions.
+
 - How to integrate with CMake/CPM?
 
     ```
