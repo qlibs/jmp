@@ -929,7 +929,7 @@ class static_branch<T, Min, Max> final {
   using entry_t = entry<0u>;
   auto data = u64(&__start___jmp);
   while (data != u64(&__stop___jmp)) {
-    const auto* entry = (entry_t*)data;
+    const auto* entry = (const entry_t*)data;
     data += entry->size;
     if (const auto memory = u64(entry->code) & ~(page_size - 1u);
         mprotect((void*)memory, u64(entry->code) - memory + entry->len, permissions)) {
