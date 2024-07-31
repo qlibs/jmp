@@ -433,6 +433,7 @@ struct static_branch<T, Min, Max> final {
     ```cpp
     main:
       .byte 15 31 68 0 0 # nop - https://www.felixcloutier.com/x86/nop
+    .LBB0:
       xor eax, eax # return 0
       ret
     .LBB1:
@@ -468,6 +469,7 @@ struct static_branch<T, Min, Max> final {
       call b.operator=(true); # nop->jmp or jmp->nop
 
       jmp .LBB1: (nop->jmp - changed in the memory of the program)
+    .LBB0:
       xor eax, eax # return 0
       ret
     .LBB1:
