@@ -10,7 +10,7 @@
 // -->
 [![Boost Licence](http://img.shields.io/badge/license-boost-blue.svg)](http://www.boost.org/LICENSE_1_0.txt)
 [![Version](https://badge.fury.io/gh/qlibs%2Fjmp.svg)](https://github.com/qlibs/jmp/releases)
-[![build](https://img.shields.io/badge/build-blue.svg)](https://godbolt.org/z/zxdzjMcGq)
+[![build](https://img.shields.io/badge/build-blue.svg)](https://godbolt.org/z/5jrTM6cqM)
 [![Try it online](https://img.shields.io/badge/try%20it-online-blue.svg)](https://godbolt.org/z/v8W3Pzbxd)
 
 ---------------------------------------
@@ -67,7 +67,7 @@ void fn() {
 
 int main() {
   if (not jmp::init()) { // enables run-time code patching
-    return -1; // can't change permissions for code pages
+    return errno;
   }
 
   fn(); // not taken
@@ -178,7 +178,7 @@ fn(): // https://godbolt.org/z/jvKGdPMWK
 
 ----
 
-> `static_branch<T>` (https://godbolt.org/z/sP8qzMMnj)
+> `static_branch<T>` (https://godbolt.org/z/Tz4ox7ncv)
 
 ```cpp
 constexpr jmp::static_branch<int, 0, 2> static_int = 0; // range: <0, 2>
@@ -194,7 +194,7 @@ void fn() {
 
 int main() {
   if (not jmp::init()) { // enables run-time code patching
-    return -1; // can't change permissions for code pages
+    return errno;
   }
 
   fn(); // 0
@@ -243,7 +243,7 @@ main:
 
 ### Examples
 
-> `variant` (https://godbolt.org/z/d6sf8EcWj) | (https://wg21.link/P2996)
+> `variant` (https://godbolt.org/z/TKPdYPv3P) | (https://wg21.link/P2996)
 
 ```cpp
 template<class... Ts>
@@ -306,7 +306,7 @@ void usage(const variant<bool, int, float>& v) {
 
 int main() {
   if (not jmp::init()) { // enables run-time code patching
-    return -1; // can't change permissions for code pages
+    return errno;
   }
 
   variant<bool, int, float> v{};
