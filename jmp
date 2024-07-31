@@ -122,7 +122,7 @@ void fn() {
   if (static_bool) {
     throw;
   } else {
-    std::puts("taken");
+    std::puts("else");
   }
 }
 
@@ -154,7 +154,7 @@ void fn() {
   if (dynamic_bool) {
     throw;
   } else {
-    std::puts("taken");
+    std::puts("else");
   }
 }
 
@@ -190,7 +190,7 @@ constexpr jmp::static_branch<int, 0, 2> static_int = 0; // range: <0, 2>
 
 void fn() {
   switch (static_int) {
-    default: return;
+    default: std::unreachable();
     case 0: std::puts("0"); return;
     case 1: std::puts("1"); return;
     case 2: std::puts("2"); return;
@@ -258,8 +258,7 @@ class variant {
  public:
    constexpr variant() = default;
 
-   template<class T>
-     requires (not std::is_base_of_v<variant, std::remove_cvref_t<T>>)
+   template<class T> requires (not std::is_base_of_v<variant, std::remove_cvref_t<T>>)
    constexpr explicit(false) variant(T&& t) {
     constexpr auto index = [] {
       std::array match{std::is_same_v<Ts, std::remove_cvref_t<T>>...};
