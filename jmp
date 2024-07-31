@@ -26,7 +26,7 @@
 > - branch is expensive to compute and/or require memory access `and/or`
 > - branch is hard to predict/learn by the hardware
 
-> Examples: logging, tracing, dispatching, ...
+> Examples: logging, tracing, dispatching, devirtualization, ...
 
 ### Features
 
@@ -341,6 +341,159 @@ usage(variant<bool, int, float> const&):
 .LC0: .asciz  "bool"
 .LC1: .asciz  "int"
 .LC2: .asciz  "float"
+```
+
+---
+
+> Dispatching techniques (https://godbolt.org/z/cfKP9E8W9)
+
+```cpp
+auto $if_else(bool b) -> int {                              # if_else(bool):
+  if (b) {                                                  #   testl   %edi, %edi
+    return f1();                                            #   movl    $42, %ecx
+  } else {                                                  #   movl    $77, %eax
+    return f2();                                            #   cmovnel %ecx, %eax # cmove or cmp
+  }                                                         #   retq
+}                                                           #
+
+auto $if_else_likely(bool b) -> int {                       # $if_else_likely(bool):
+  if (b) [[likely]] {                                       #   movl    $42, %eax # likely
+    return f1();                                            #   testl   %edi, %edi
+  } else {                                                  #   je      .LBB3_1
+    return f2();                                            #   retq
+  }                                                         # .LBB3_1:
+}                                                           #   movl    $77, %eax
+                                                            #   retq
+
+auto $ternary_op(bool b) -> int {                           # $ternary_op(bool):
+  return b ? f1() : f2();                                   #   testl   %edi, %edi
+}                                                           #   movl    $42, %ecx
+                                                            #   movl    $77, %eax
+                                                            #   cmovnel %ecx, %eax # often cmove
+                                                            #   retq
+
+auto $jump_table(bool b) -> int {                           # $jump_table(bool):
+  static constexpr int (*dispatch[])(){                     #  movl    %edi, %eax
+    &f1, &f2                                                #  leaq    $jump_table(bool)::dispatch(%rip), %rcx
+  };                                                        #  jmpq    *(%rcx,%rax,8) # or call
+  return dispatch[b]();                                     #
+}                                                           # $jump_table(bool)::dispatch:
+                                                            #  .quad   f1()
+                                                            #  .quad   f2()
+
+auto $jump_table_musttail(bool b) -> int {                  # $jump_table_musttail(bool):
+  static constexpr int (*dispatch[])(bool){                 #   movl    %edi, %eax
+    [](bool) { return f1(); },                              #   leaq    $jump_table_musttail(bool)::dispatch(%rip), %rcx
+    [](bool) { return f2(); },                              #   jmpq    *(%rcx,%rax,8) # always jmp
+  };                                                        #
+  [[clang::musttail]] return dispatch[b](b);                # jump_table_musttail(bool)::dispatch:
+}                                                           #  .quad   $jump_table_musttail(bool)::$_0::__invoke(bool)
+                                                            #  .quad   $jump_table_musttail(bool)::$_1::__invoke(bool)
+
+auto $computed_goto(bool b) -> int {                        #
+  static constexpr void* labels[]{&&L1, &&L2};              # $computed_goto(bool):
+  goto *labels[b];                                          #   movl    %edi, %eax
+  L1: return f1();                                          #   leaq    $computed_goto(bool)::labels(%rip), %rcx
+  L2: return f2();                                          #   jmpq    *(%rcx,%rax,8)
+}                                                           # .Ltmp15:
+                                                            #   movl    $42, %eax
+                                                            #   retq
+                                                            # .Ltmp17:
+                                                            #   movl    $77, %eax
+                                                            #   retq
+
+static constexpr jmp::static_branch<bool> branch = false;   # $jmp():
+auto $jmp() -> int {                                        # nop # code patching (nop->jmp)
+  if (branch) {                                             # movl    $42, %eax
+    return f1();                                            # retq
+  } else {                                                  # movl    $77, %eax
+    return f2();                                            # retq
+  }
+}
+```
+
+```cpp
+static auto f1() -> int { return 42; }
+static auto f2() -> int { return 77; }
+static auto f3() -> int { return 99; }
+
+auto $if_else(int i) -> int {                               # $if_else(int):
+  [[assume(i >= 0 and i <= 2)]];                            #   cmpl    $1, %edi
+  if (i == 0) {                                             #   movl    $77, %eax
+    return f1();                                            #   movl    $99, %ecx
+  } else if (i == 1) {                                      #   cmovel  %eax, %ecx
+    return f2();                                            #   testl   %edi, %edi
+  } else if (i == 2) {                                      #   movl    $42, %eax
+    return f3();                                            #   cmovnel %ecx, %eax
+  } else {                                                  #   retq
+    std::unreachable();
+  }
+}
+
+auto $switch_case(int i) -> int {                           # $switch_case(int):
+  [[assume(i >= 0 and i <= 2)]];                            #   movl    %edi, %eax
+  switch (i) {                                              #   leaq    .Lswitch.table.$switch(int)(%rip), %rcx
+    default: std::unreachable();                            #   movl    (%rcx,%rax,4), %eax
+    case 0: return f1();                                    #   retq
+    case 1: return f2();                                    # .Lswitch.table.$switch(int):
+    case 2: return f3();                                    #   .long   42
+  }                                                         #   .long   77
+}                                                           #   .long   99
+
+auto $switch_case_with_probability(int i) -> int {          # $switch_case_with_probability(int):
+  [[assume(i >= 0 and i <= 2)]];                            #   movl    %edi, %eax
+  switch (__builtin_expect_with_probability(i, 0, .9)) {    #   leaq    .Lswitch.table.$switch(int)(%rip), %rcx
+    default: std::unreachable();                            #   movl    (%rcx,%rax,4), %eax
+    case 0: return f1();                                    #   retq
+    case 1: return f2();                                    # .Lswitch.table.$switch(int):
+    case 2: return f3();                                    #   .long   42
+  }                                                         #   .long   77
+}                                                           #   .long   99
+
+auto $jump_table(int i) -> int {                            # $jump_table(int):
+  [[assume(i >= 0 and i <= 2)]];                            #   movl    %edi, %eax
+  static constexpr int (*dispatch[])(){                     #   leaq    $jump_table(int)::dispatch(%rip), %rcx
+    &f1, &f2, &f3                                           #   jmpq    *(%rcx,%rax,8) # call or jmp
+  };                                                        # $jump_table(int)::dispatch:
+  return dispatch[i]();                                     #  .quad   f1()
+}                                                           #  .quad   f2()
+                                                            #  .quad   f3()
+
+auto $jump_table_musttail(int i) -> int {                   # $jump_table_musttail(int):
+  [[assume(i >= 0 and i <= 2)]];                            #   movl    %edi, %eax
+  static constexpr int (*dispatch[])(int){                  #   leaq    $jump_table_musttail(int)::dispatch(%rip), %rcx
+    [](int) { return f1(); },                               #   jmpq    *(%rcx,%rax,8) # always jmp
+    [](int) { return f2(); },                               # $jump_table_musttail(int)::dispatch:
+    [](int) { return f3(); },                               #  .quad   f1()
+  };                                                        #  .quad   f2()
+  [[clang::musttail]] return dispatch[i](i);                #  .quad   f3()
+}
+
+auto $computed_goto(int i) -> int {                         # $computed_goto(int):
+  [[assume(i >= 0 and i <= 2)]];                            #   movl    %edi, %eax
+  static constexpr void* labels[]{&&L1, &&L2, &&L3};        #   leaq    $computed_goto(int)::labels(%rip), %rcx
+  goto *labels[i];                                          #   jmpq    *(%rcx,%rax,8)
+  L1: return f1();                                          # .Ltmp35:
+  L2: return f2();                                          #   movl    $42, %eax
+  L3: return f3();                                          #   retq
+}                                                           # .Ltmp37:
+                                                            #   movl    $99, %eax
+                                                            #   retq
+                                                            # .Ltmp39:
+                                                            #   movl    $77, %eax
+                                                            #   retq
+
+static constexpr jmp::static_branch<int, 0, 2> branch = 0;  # $jmp():
+auto $jmp() -> int {                                        #   jmp .LBB21_0: # code patching
+  switch (branch) {                                         # .LBB21_0:
+    default: std::unreachable();                            #   movl    $42, %eax
+    case 0: return f1();                                    #   retq
+    case 1: return f2();                                    # .LBB21_1:
+    case 2: return f3();                                    #   movl    $99, %eax
+  }                                                         #   retq
+}                                                           # .LBB21_3:
+                                                            #   movl    $77, %eax
+                                                            #   retq
 ```
 
 ---
