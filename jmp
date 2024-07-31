@@ -413,11 +413,11 @@ auto $computed_goto(bool b) -> int {           #
                                                #   .quad   .Ltmp17
 
 jmp::static_branch<bool> branch = false;       # $jmp():
-auto $jmp() -> int {                           # nop # code patching (nop->jmp)
-  if (branch) {                                # movl    $42, %eax
-    return f1();                               # retq
-  } else {                                     # movl    $77, %eax
-    return f2();                               # retq
+auto $jmp() -> int {                           #   nop # code patching (nop->jmp)
+  if (branch) {                                #   movl    $42, %eax
+    return f1();                               #   retq
+  } else {                                     #   movl    $77, %eax
+    return f2();                               #   retq
   }
 }
 ```
