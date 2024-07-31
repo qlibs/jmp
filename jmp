@@ -686,10 +686,9 @@ template<size_t N> struct [[gnu::packed]] entry {
   u32 offsets[N]{};   /// jmp offsets
 };
 
-#if defined(__x86_64__)
-inline namespace x86_64 {
 template<class T, T...> struct static_branch;
 
+#if defined(__x86_64__)
 template<> class static_branch<bool> final {
   using instr_t = array<u8, 5u>; /// sizeof(nop/jmp)
   using entry_t = entry<2u>;
@@ -914,7 +913,7 @@ class static_branch<T, Min, Max> final {
     _7: return T(7) + Min;
   }
 };
-} // namespace x86_64
+#endif
 
 /**
  * Makes required pages writable for code patching
@@ -937,7 +936,6 @@ class static_branch<T, Min, Max> final {
   }
   return true;
 }
-#endif
 } // namespace jmp
 
 #ifdef NTEST
