@@ -650,7 +650,7 @@ struct static_branch<T, Min, Max> final {
     ```
 
     ```
-    target_link_libraries(${PROJECT_NAME} jmp:jmp)
+    target_link_libraries(${PROJECT_NAME} jmp::jmp)
     ```
 
 - Acknowledgments
