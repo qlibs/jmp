@@ -400,13 +400,12 @@ auto jump_table_musttail(bool b) -> int {      # jump_table_musttail(bool):
 }                                              #  .quad   f1::__invoke(bool)
                                                #  .quad   f2::__invoke(bool)
 
-auto computed_goto(bool b) -> int {            #
-  static constexpr void* labels[]{&&L1, &&L2}; # computed_goto(bool):
-  goto *labels[b];                             #   movl    %edi, %eax
-  L1: return f1();                             #   leaq    labels(%rip), %rcx
-  L2: return f2();                             #   jmpq    *(%rcx,%rax,8)
-}                                              # .Ltmp15:
-                                               #   movl    $42, %eax
+auto computed_goto(bool b) -> int {            # computed_goto(bool):
+  static constexpr void* labels[]{&&L1, &&L2}; #   movl    %edi, %eax
+  goto *labels[b];                             #   leaq    labels(%rip), %rcx
+  L1: return f1();                             #   jmpq    *(%rcx,%rax,8)
+  L2: return f2();                             # .Ltmp15:
+}                                              #   movl    $42, %eax
                                                #   retq
                                                # .Ltmp17:
                                                #   movl    $77, %eax
