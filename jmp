@@ -80,9 +80,7 @@ int main() {
 ```cpp
 main: // $CXX -O3
   // ... init
-  xor eax, eax
-
-// fn (inlined)
+  // fn (inlined)
   nop
 .Ltmp0:
   mov edi, OFFSET FLAT:.LC0
@@ -95,7 +93,7 @@ main: // $CXX -O3
 
   call static_bool.operator=(true)
 
-// fn (inlined)
+  // fn (inlined)
   jmp .Ltmp1 // code patching (nop->jmp)
 .Ltmp0:
   mov edi, OFFSET FLAT:.LC0
