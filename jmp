@@ -183,7 +183,7 @@ fn():
 
 ----
 
-> `static_branch<T>` (https://godbolt.org/z/Tz4ox7ncv)
+> `static_branch<T, T Min, T Max>` (https://godbolt.org/z/Tz4ox7ncv)
 
 ```cpp
 constexpr jmp::static_branch<int, 0, 2> static_int = 0; // range: <0, 2>
@@ -498,6 +498,8 @@ auto jmp() -> int {                            #   jmp .LBB21_0: # code patching
 [[gnu::always_inline]] inline void fast_path() { std::puts("fast_path"); }
 [[gnu::cold]] void slow_path() { std::puts("slow_path"); }
 
+constexpr jmp::static_branch<bool> disarmed = false;
+
 void trigger() {
   if (not disarmed) { // {false:nop, true:jmp}
     fast_path();
@@ -588,7 +590,7 @@ struct static_branch<T, Min, Max> final {
   `jmp::static_branch` is based on https://docs.kernel.org/staging/static-keys.html and it requires `asm goto` support (gcc, clang).
   `jmp` currently supports x86-64 Linux, but other platforms can be added using the same technique.
 
-  Example
+  > Walkthrough
 
     ```cpp
     constexpr jmp::static_branch<bool> b = false;
