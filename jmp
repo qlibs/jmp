@@ -501,7 +501,7 @@ auto jmp() -> int {                            #   jmp .LBB21_0: # code patching
 constexpr jmp::static_branch<bool> disarmed = false;
 
 void trigger() {
-  if (not disarmed) { // {false:nop, true:jmp}
+  if (not disarmed) { // { false: nop, true: jmp }
     fast_path();
   } else {
     slow_path();
