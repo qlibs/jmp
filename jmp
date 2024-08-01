@@ -490,6 +490,30 @@ auto jmp() -> int {                            #   jmp .LBB21_0: # code patching
                                                #   movl    $77, %eax
                                                #   retq
 ```
+---
+
+> Fast/Slow path (https://godbolt.org/z/qvar9ThK9)
+
+```cpp
+[[gnu::always_inline]] inline void fast_path() { std::puts("fast_path"); }
+[[gnu::cold]] void slow_path() { std::puts("slow_path"); }
+
+void trigger() {
+  if (not disarmed) { // {false:nop, true:jmp}
+    fast_path();
+  } else {
+    slow_path();
+  }
+}
+```
+
+```cpp
+trigger():
+  nop                              # code patching (nop->jmp)
+  mov edi, OFFSET FLAT:.LC1        # fast path
+  jmp puts
+  jmp slow_path() # [clone .cold]  # slow path
+```
 
 ---
 
