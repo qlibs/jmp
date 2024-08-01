@@ -510,7 +510,7 @@ void trigger() {
 ```
 
 ```cpp
-trigger():
+trigger(): // $CXX -O3
   nop                              # code patching (nop->jmp)
   mov edi, OFFSET FLAT:.LC1        # fast path
   jmp puts
