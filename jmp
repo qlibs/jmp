@@ -512,11 +512,11 @@ void trigger() {
 ```cpp
 trigger(): // $CXX -O3
   nop                              # code patching (nop->jmp .Ltmp1)
- .Ltmp0:
-  mov edi, OFFSET FLAT:.LC1        # fast path
- .Ltmp1:
+ .Ltmp0:                           # fast path (inlined)
+  mov edi, OFFSET FLAT:.LC1
   jmp puts
-  jmp slow_path() # [clone .cold]  # slow path
+ .Ltmp1:                           # slow path (cold)
+  jmp slow_path() # [clone .cold]
 ```
 
 ---
