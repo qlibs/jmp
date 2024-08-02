@@ -23,8 +23,8 @@
 
 > Performance
 > - branch is relatively stable through its life cycle `and/or`
-> - branch is expensive to compute and/or require memory access `and/or`
-> - branch is hard to predict/learn by the hardware
+> - branch is expensive to compute and/or require [memory access](https://en.wikipedia.org/wiki/CPU_cache) `and/or`
+> - branch is hard to predict/learn by the [branch predictor]((https://en.wikipedia.org/wiki/Branch_predictor)
 
 > Examples: logging, tracing, dispatching, devirtualization, ...
 
@@ -416,13 +416,13 @@ auto computed_goto(bool b) -> int {            # computed_goto(bool):
                                                #   .quad   .Ltmp17
 
 jmp::static_branch<bool> branch = false;       # jmp():
-auto jmp() -> int {                            #   nop # code patching (nop->jmp)
-  if (branch) {                                #   movl    $42, %eax
-    return f1();                               #   retq
-  } else {                                     #   movl    $77, %eax
-    return f2();                               #   retq
-  }
-}
+auto jmp() -> int {                            #   nop # code patching (nop->jmp .Ltmp1)
+  if (branch) {                                # .Ltmp0:
+    return f1();                               #   movl    $42, %eax
+  } else {                                     #   retq
+    return f2();                               # .Ltmp1:
+  }                                            #   movl    $77, %eax
+}                                              #   retq
 ```
 
 ```cpp
@@ -479,14 +479,14 @@ auto computed_goto(int i) -> int {             # computed_goto(int):
                                                #   .quad   .Ltmp39
 
 jmp::static_branch<int, 0, 2> branch = 0;      # jmp():
-auto jmp() -> int {                            #   jmp .LBB21_0: # code patching
+auto jmp() -> int {                            #   jmp .LBB21_0|.LBB21_1|.LBB21_2: # code patching
   switch (branch) {                            # .LBB21_0:
     default: std::unreachable();               #   movl    $42, %eax
     case 0: return f1();                       #   retq
     case 1: return f2();                       # .LBB21_1:
     case 2: return f3();                       #   movl    $99, %eax
   }                                            #   retq
-}                                              # .LBB21_3:
+}                                              # .LBB21_2:
                                                #   movl    $77, %eax
                                                #   retq
 ```
@@ -511,8 +511,10 @@ void trigger() {
 
 ```cpp
 trigger(): // $CXX -O3
-  nop                              # code patching (nop->jmp)
+  nop                              # code patching (nop->jmp .Ltmp1)
+ .Ltmp0:
   mov edi, OFFSET FLAT:.LC1        # fast path
+ .Ltmp1:
   jmp puts
   jmp slow_path() # [clone .cold]  # slow path
 ```
