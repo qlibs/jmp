@@ -26,7 +26,7 @@
 > - branch is expensive to compute and/or require [memory access](https://en.wikipedia.org/wiki/CPU_cache) `and/or`
 > - branch is hard to predict/learn by the [branch predictor](https://en.wikipedia.org/wiki/Branch_predictor)
 
-> Examples: logging, tracing, dispatching, devirtualization, ...
+> Examples: logging, tracing, dispatching, fast path, devirtualization, ...
 
 ### Features
 
@@ -492,7 +492,7 @@ auto jmp() -> int {                            #   jmp .LBB21_0|.LBB21_1|.LBB21_
 ```
 ---
 
-> Fast/Slow path (https://godbolt.org/z/qvar9ThK9)
+> [Fast/Slow path](https://en.wikipedia.org/wiki/Fast_path) (https://godbolt.org/z/qvar9ThK9)
 
 ```cpp
 [[gnu::always_inline]] inline void fast_path() { std::puts("fast_path"); }
