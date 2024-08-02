@@ -578,7 +578,7 @@ struct static_branch<T, Min, Max> final {
 > Configuration
 
 ```cpp
-#define $JMP 5'0'0 // Current library version (SemVer)
+#define JMP 5'0'0 // Current library version (SemVer)
 ```
 
 ---
@@ -685,9 +685,9 @@ struct static_branch<T, Min, Max> final {
 
 <!--
 #else
+#ifndef JMP
+#define JMP 5'0'0 // SemVer
 #pragma GCC system_header
-#ifndef $JMP
-#define $JMP 5'0'0 // SemVer
 
 extern "C" int mprotect(void*, __SIZE_TYPE__, int);
 extern "C" void* __start___jmp [[gnu::section("__jmp")]];
@@ -722,9 +722,9 @@ template<class T, T...> struct static_branch;
 template<> class static_branch<bool> final {
   using instr_t = array<u8, 5u>; /// sizeof(nop/jmp)
   using entry_t = entry<2u>;
-  static constexpr instr_t NOP{0x0f, 0x1f, 0x44, 0x00, 0x00}; /// https://www.felixcloutier.com/x86/nop
-  static constexpr instr_t JMP{0xe9, 0x00, 0x00, 0x00, 0x00}; /// https://www.felixcloutier.com/x86/jmp
-  static_assert(sizeof(NOP) == sizeof(JMP));
+  static constexpr instr_t $NOP{0x0f, 0x1f, 0x44, 0x00, 0x00}; /// https://www.felixcloutier.com/x86/nop
+  static constexpr instr_t $JMP{0xe9, 0x00, 0x00, 0x00, 0x00}; /// https://www.felixcloutier.com/x86/jmp
+  static_assert(sizeof($NOP) == sizeof($JMP));
 
  public:
   constexpr explicit(false) static_branch(const bool value) noexcept {
@@ -736,8 +736,8 @@ template<> class static_branch<bool> final {
   constexpr auto& operator=(static_branch&&) noexcept = delete;
 
   inline const auto& operator=(const bool value) const noexcept {
-    struct [[gnu::packed]] { u8 op{JMP[0u]}; u32 offset{}; } jmp{};
-    const instr_t* ops[]{&NOP, (const instr_t*)&jmp};
+    struct [[gnu::packed]] { u8 op{$JMP[0u]}; u32 offset{}; } jmp{};
+    const instr_t* ops[]{&$NOP, (const instr_t*)&jmp};
     auto data = u64(&__start___jmp);
     while (data != u64(&__stop___jmp)) {
       const auto* entry = (const entry_t*)data;
@@ -757,7 +757,7 @@ template<> class static_branch<bool> final {
       ".quad %c7, 0b, %c5, %c6 \n"
       ".long 0, %l[_true] - (0b + %c5) \n"
       ".popsection \n"
-      : : "i"(NOP[0]), "i"(NOP[1]), "i"(NOP[2]), "i"(NOP[3]), "i"(NOP[4]),
+      : : "i"($NOP[0]), "i"($NOP[1]), "i"($NOP[2]), "i"($NOP[3]), "i"($NOP[4]),
           "i"(sizeof(instr_t)),
           "i"(this),
           "i"(sizeof(entry_t))
@@ -771,7 +771,7 @@ template<class T, T Min, T Max>
   requires requires(T t) { reinterpret_cast<T>(t); } and (Max - Min >= 2 and Max - Min <= 7)
 class static_branch<T, Min, Max> final {
   using entry_t = entry<(Max - Min) + T(1)>;
-  static constexpr u8 JMP[]{0xe9, 0x00, 0x00, 0x00, 0x00}; /// https://www.felixcloutier.com/x86/jmp
+  static constexpr u8 $JMP[]{0xe9, 0x00, 0x00, 0x00, 0x00}; /// https://www.felixcloutier.com/x86/jmp
 
  public:
   constexpr explicit(false) static_branch(const T value) noexcept {
@@ -803,7 +803,7 @@ class static_branch<T, Min, Max> final {
         ".long %l[_1] - (1 + 0b + %c5) \n"
         ".long %l[_2] - (1 + 0b + %c5) \n"
         ".popsection \n"
-        : : "i"(JMP[0]), "i"(JMP[1]), "i"(JMP[2]), "i"(JMP[3]), "i"(JMP[4]),
+        : : "i"($JMP[0]), "i"($JMP[1]), "i"($JMP[2]), "i"($JMP[3]), "i"($JMP[4]),
             "i"(sizeof(u32)),
             "i"(this),
             "i"(sizeof(entry_t))
@@ -824,7 +824,7 @@ class static_branch<T, Min, Max> final {
       ".long %l[_2] - (1 + 0b + %c5) \n"
       ".long %l[_3] - (1 + 0b + %c5) \n"
       ".popsection \n"
-      : : "i"(JMP[0]), "i"(JMP[1]), "i"(JMP[2]), "i"(JMP[3]), "i"(JMP[4]),
+      : : "i"($JMP[0]), "i"($JMP[1]), "i"($JMP[2]), "i"($JMP[3]), "i"($JMP[4]),
           "i"(sizeof(u32)),
           "i"(this),
           "i"(sizeof(entry_t))
@@ -847,7 +847,7 @@ class static_branch<T, Min, Max> final {
       ".long %l[_3] - (1 + 0b + %c5) \n"
       ".long %l[_4] - (1 + 0b + %c5) \n"
       ".popsection \n"
-      : : "i"(JMP[0]), "i"(JMP[1]), "i"(JMP[2]), "i"(JMP[3]), "i"(JMP[4]),
+      : : "i"($JMP[0]), "i"($JMP[1]), "i"($JMP[2]), "i"($JMP[3]), "i"($JMP[4]),
           "i"(sizeof(u32)),
           "i"(this),
           "i"(sizeof(entry_t))
@@ -872,7 +872,7 @@ class static_branch<T, Min, Max> final {
       ".long %l[_4] - (1 + 0b + %c5) \n"
       ".long %l[_5] - (1 + 0b + %c5) \n"
       ".popsection \n"
-      : : "i"(JMP[0]), "i"(JMP[1]), "i"(JMP[2]), "i"(JMP[3]), "i"(JMP[4]),
+      : : "i"($JMP[0]), "i"($JMP[1]), "i"($JMP[2]), "i"($JMP[3]), "i"($JMP[4]),
           "i"(sizeof(u32)),
           "i"(this),
           "i"(sizeof(entry_t))
@@ -899,7 +899,7 @@ class static_branch<T, Min, Max> final {
       ".long %l[_5] - (1 + 0b + %c5) \n"
       ".long %l[_6] - (1 + 0b + %c5) \n"
       ".popsection \n"
-      : : "i"(JMP[0]), "i"(JMP[1]), "i"(JMP[2]), "i"(JMP[3]), "i"(JMP[4]),
+      : : "i"($JMP[0]), "i"($JMP[1]), "i"($JMP[2]), "i"($JMP[3]), "i"($JMP[4]),
           "i"(sizeof(u32)),
           "i"(this),
           "i"(sizeof(entry_t))
@@ -928,7 +928,7 @@ class static_branch<T, Min, Max> final {
       ".long %l[_6] - (1 + 0b + %c5) \n"
       ".long %l[_7] - (1 + 0b + %c5) \n"
       ".popsection \n"
-      : : "i"(JMP[0]), "i"(JMP[1]), "i"(JMP[2]), "i"(JMP[3]), "i"(JMP[4]),
+      : : "i"($JMP[0]), "i"($JMP[1]), "i"($JMP[2]), "i"($JMP[3]), "i"($JMP[4]),
           "i"(sizeof(u32)),
           "i"(this),
           "i"(sizeof(entry_t))
@@ -1007,5 +1007,5 @@ static_assert(([] {
   }
 }(), true));
 #endif // NTEST
-#endif // $JMP
+#endif // JMP
 #endif // README
