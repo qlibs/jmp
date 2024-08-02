@@ -416,7 +416,7 @@ auto computed_goto(bool b) -> int {            # computed_goto(bool):
                                                #   .quad   .Ltmp17
 
 jmp::static_branch<bool> branch = false;       # jmp():
-auto jmp() -> int {                            #   nop # code patching (nop->jmp .Ltmp1)
+auto jmp() -> int {                            #   nop|jmp .Ltmp1 # code patching
   if (branch) {                                # .Ltmp0:
     return f1();                               #   movl    $42, %eax
   } else {                                     #   retq
@@ -479,7 +479,7 @@ auto computed_goto(int i) -> int {             # computed_goto(int):
                                                #   .quad   .Ltmp39
 
 jmp::static_branch<int, 0, 2> branch = 0;      # jmp():
-auto jmp() -> int {                            #   jmp .LBB21_0|.LBB21_1|.LBB21_2: # code patching
+auto jmp() -> int {                            #   jmp .LBB21_0|.LBB21_1|.LBB21_2
   switch (branch) {                            # .LBB21_0:
     default: std::unreachable();               #   movl    $42, %eax
     case 0: return f1();                       #   retq
