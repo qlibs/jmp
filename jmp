@@ -97,7 +97,7 @@ main: // $CXX -O3
   call static_bool.operator=(true)
 
 # fn(); // taken
-  jmp .Ltmp1 // code patching (nop->jmp)
+  jmp .Ltmp1 // code patching (nop->jmp .Ltmp1)
 .Ltmp0:
   mov edi, OFFSET FLAT:.LC0
   jmp puts
@@ -214,7 +214,7 @@ int main() {
 
 ```cpp
 fn: // $CXX -O3 -fno-inline
-  nop # code patching (nop->jmp)
+  nop # code patching (nop->jmp .Ltmp1|.Ltmp2)
 .Ltmp0:
   mov edi, OFFSET FLAT:.LC0
   jmp puts
@@ -328,7 +328,7 @@ int main() {
 
 ```cpp
 usage(variant<bool, int, float> const&):
-  nop # code patching (nop->jmp)
+  nop # code patching (nop->jmp .Ltmp1|.Ltmp2)
 .Ltmp0:
   mov edi, OFFSET FLAT:.LC0
   jmp puts
