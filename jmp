@@ -52,13 +52,9 @@ constexpr jmp::static_branch<bool> static_bool = false;
 
 /**
  * Note: `fn` can be inline/noinline/constexpr/etc.
- * constexpr void fn();
- * inline void fn();
- * [[gnu::noinline]] void fn()
- * [[gnu::always_inline]] void fn()
  */
 void fn() {
-  if (static_bool) { // [[likely]], [[unlikely]]
+  if (static_bool) { // Note: [[likely]], [[unlikely]] has no impact
     std::puts("taken");
   } else {
     std::puts("not taken");
