@@ -690,6 +690,7 @@ struct static_branch<T, Min, Max> final {
 #pragma GCC system_header
 
 extern "C" int mprotect(void*, __SIZE_TYPE__, int);
+extern "C" int getpagesize();
 extern "C" void* __start___jmp [[gnu::section("__jmp")]];
 extern "C" void*  __stop___jmp [[gnu::section("__jmp")]];
 
@@ -949,11 +950,11 @@ class static_branch<T, Min, Max> final {
  * Makes required pages writable for code patching
  * Note: Must be called before changing the branch value (`branch = ...`)
  *       Should be called once at the startup
- * @param page_size page size (default: sysconf(_SC_PAGESIZE))
+ * @param page_size page size (default: getpagesize())
  * @param permissions protect permissions (default: PROT_READ | PROT_WRITE | PROT_EXEC)
  * @return true if succesful, false on error (errno is set to indicate the error)
  */
-[[nodiscard]] static inline auto init(const u64 page_size = 4096u, const u64 permissions = 0b111) noexcept -> bool {
+[[nodiscard]] static inline auto init(const u64 page_size = getpagesize(), const u64 permissions = 0b111) noexcept -> bool {
   using entry_t = entry<0u>;
   auto data = u64(&__start___jmp);
   while (data != u64(&__stop___jmp)) {
