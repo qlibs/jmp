@@ -677,15 +677,15 @@ struct static_branch<T, Min, Max> final {
 
 - Acknowledgments
 
-  > - https://docs.kernel.org/staging/static-keys.html
-  > - https://www.intel.com/content/www/us/en/developer/articles/technical/intel-sdm.html
-  > - https://www.agner.org/optimize/instruction_tables.pdf
-  > - https://gcc.gnu.org/onlinedocs/gcc/Extended-Asm.html
-  > - https://www.felixcloutier.com/documents/gcc-asm.html
-  > - https://www.felixcloutier.com/x86
-  > - https://uops.info/table.html
-  > - https://arxiv.org/abs/2308.14185
-  > - https://arxiv.org/pdf/2011.13127
+  > https://docs.kernel.org/staging/static-keys.html
+  > https://www.intel.com/content/www/us/en/developer/articles/technical/intel-sdm.html
+  > https://www.agner.org/optimize/instruction_tables.pdf
+  > https://gcc.gnu.org/onlinedocs/gcc/Extended-Asm.html
+  > https://www.felixcloutier.com/documents/gcc-asm.html
+  > https://www.felixcloutier.com/x86
+  > https://uops.info/table.html
+  > https://arxiv.org/abs/2308.14185
+  > https://arxiv.org/pdf/2011.13127
 
 <!--
 #else
