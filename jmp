@@ -693,8 +693,8 @@ struct static_branch<T, Min, Max> final {
 #define JMP 5'0'0 // SemVer
 #pragma GCC system_header
 
-extern "C" int mprotect(void*, __SIZE_TYPE__, int);
 extern "C" int getpagesize();
+extern "C" int mprotect(void*, __SIZE_TYPE__, int);
 extern "C" void* __start___jmp [[gnu::section("__jmp")]];
 extern "C" void*  __stop___jmp [[gnu::section("__jmp")]];
 
