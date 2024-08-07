@@ -21,7 +21,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 //
-#ifdef README
+#if 0
 // -->
 [![MIT Licence](http://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/license/mit)
 [![Version](https://badge.fury.io/gh/qlibs%2Fjmp.svg)](https://github.com/qlibs/jmp/releases)
@@ -586,12 +586,6 @@ struct static_branch<T, Min, Max> final {
 };
 ```
 
-> Configuration
-
-```cpp
-#define JMP 5'0'0 // Current library version (SemVer)
-```
-
 ---
 
 ### FAQ
@@ -701,11 +695,10 @@ struct static_branch<T, Min, Max> final {
   > - https://uops.info/table.html
   > - https://arxiv.org/abs/2308.14185
   > - https://arxiv.org/abs/2011.13127
-
 <!--
-#else
-#ifndef JMP
-#define JMP 5'0'0 // SemVer
+#endif
+
+#pragma once
 #pragma GCC system_header
 
 extern "C" int getpagesize();
@@ -1027,5 +1020,3 @@ static_assert(([] {
   }
 }(), true));
 #endif // NTEST
-#endif // JMP
-#endif // README
