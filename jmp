@@ -23,7 +23,6 @@
 //
 #if 0
 // --> ```JMP: Static branch library``` 
-## JMP: Static branch library
 > https://en.wikipedia.org/wiki/Branch_(computer_science)
 
 [![MIT Licence](http://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/license/mit)
