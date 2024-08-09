@@ -23,14 +23,13 @@
 //
 #if 0
 // -->
+
+## JMP: Static branch library
+
 [![MIT Licence](http://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/license/mit)
 [![Version](https://badge.fury.io/gh/qlibs%2Fjmp.svg)](https://github.com/qlibs/jmp/releases)
 [![build](https://img.shields.io/badge/build-blue.svg)](https://godbolt.org/z/oo3n73Mxv)
 [![Try it online](https://img.shields.io/badge/try%20it-online-blue.svg)](https://godbolt.org/z/v8W3Pzbxd)
-
----------------------------------------
-
-## JMP: Static branch library
 
 > https://en.wikipedia.org/wiki/Branch_(computer_science)
 
