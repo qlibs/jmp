@@ -548,8 +548,8 @@ template<> struct static_branch<bool> final {
   constexpr explicit(false) static_branch(const bool value) noexcept;
   constexpr static_branch(const static_branch&) noexcept = delete;
   constexpr static_branch(static_branch&&) noexcept = delete;
-  constexpr auto& operator=(const static_branch&) noexcept = delete;
-  constexpr auto& operator=(static_branch&&) noexcept = delete;
+  constexpr static_branch& operator=(const static_branch&) noexcept = delete;
+  constexpr static_branch& operator=(static_branch&&) noexcept = delete;
 
   /**
    * Updates branch value
@@ -572,8 +572,8 @@ struct static_branch<T, Min, Max> final {
   constexpr explicit(false) static_branch(const T value) noexcept;
   constexpr static_branch(const static_branch&) noexcept = delete;
   constexpr static_branch(static_branch&&) noexcept = delete;
-  constexpr auto& operator=(const static_branch&) noexcept = delete;
-  constexpr auto& operator=(static_branch&&) noexcept = delete;
+  constexpr static_branch& operator=(const static_branch&) noexcept = delete;
+  constexpr static_branch& operator=(static_branch&&) noexcept = delete;
 
   /**
    * Updates branch value
@@ -792,8 +792,8 @@ class static_branch<T, Min, Max> final {
   }
   constexpr static_branch(const static_branch&) noexcept = delete;
   constexpr static_branch(static_branch&&) noexcept = delete;
-  constexpr auto& operator=(const static_branch&) noexcept = delete;
-  constexpr auto& operator=(static_branch&&) noexcept = delete;
+  constexpr static_branch& operator=(const static_branch&) noexcept = delete;
+  constexpr static_branch& operator=(static_branch&&) noexcept = delete;
 
   inline const auto& operator=(const T value) const noexcept {
     auto data = u64(&__start___jmp);
