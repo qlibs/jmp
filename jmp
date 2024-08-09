@@ -1,4 +1,4 @@
-// <details open><p> <!--
+// <!--
 // The MIT License (MIT)
 //
 // Copyright (c) 2024 Kris Jusiak <kris@jusiak.net>
@@ -27,7 +27,7 @@
 [![build](https://img.shields.io/badge/build-blue.svg)](https://godbolt.org/z/oo3n73Mxv)
 [![Try it online](https://img.shields.io/badge/try%20it-online-blue.svg)](https://godbolt.org/z/v8W3Pzbxd)
 
-## JMP: Static branch library
+<details open><summary>JMP: Static branch library</summary><p> 
 
 > https://en.wikipedia.org/wiki/Branch_(computer_science)
 
