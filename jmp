@@ -1,4 +1,3 @@
-#if 0
 // <!--
 // The MIT License (MIT)
 //
@@ -21,7 +20,8 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-/ --> 
+//
+#if 0 // --> 
 ## JMP: Static branch library
 
 > https://en.wikipedia.org/wiki/Branch_(computer_science)
