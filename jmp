@@ -1,4 +1,4 @@
-// ```qlibs``` <!--
+// <!--
 // The MIT License (MIT)
 //
 // Copyright (c) 2024 Kris Jusiak <kris@jusiak.net>
@@ -22,7 +22,7 @@
 // SOFTWARE.
 //
 #if 0
-// -->
+// --> ```JMP: Static branch library``` 
 ## JMP: Static branch library
 > https://en.wikipedia.org/wiki/Branch_(computer_science)
 
