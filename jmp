@@ -21,13 +21,16 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 //
-#if 0 // --> 
+#if 0
+// -->
 [![MIT Licence](http://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/license/mit)
 [![Version](https://badge.fury.io/gh/qlibs%2Fjmp.svg)](https://github.com/qlibs/jmp/releases)
 [![build](https://img.shields.io/badge/build-blue.svg)](https://godbolt.org/z/oo3n73Mxv)
 [![Try it online](https://img.shields.io/badge/try%20it-online-blue.svg)](https://godbolt.org/z/v8W3Pzbxd)
 
-<details open><summary><h2>JMP: Static branch library</h2></summary><p> 
+---------------------------------------
+
+## JMP: Static branch library
 
 > https://en.wikipedia.org/wiki/Branch_(computer_science)
 
@@ -693,7 +696,6 @@ struct static_branch<T, Min, Max> final {
   > - https://arxiv.org/abs/2308.14185
   > - https://arxiv.org/abs/2011.13127
 <!--
-</p></details>
 #endif
 
 #pragma once
