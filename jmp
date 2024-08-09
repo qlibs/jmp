@@ -1,4 +1,4 @@
-// <div class="heading-element">JMP: Static branch library</div> // <!--
+//<!--
 // The MIT License (MIT)
 //
 // Copyright (c) 2024 Kris Jusiak <kris@jusiak.net>
@@ -22,7 +22,7 @@
 // SOFTWARE.
 //
 #if 0
-// -->
+//-->## JMP: Static branch library <!--
 > https://en.wikipedia.org/wiki/Branch_(computer_science)
 
 [![MIT Licence](http://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/license/mit)
