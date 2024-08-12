@@ -192,7 +192,7 @@ fn():
 [4]: MayLoad [5]: MayStore [6]: HasSideEffects (U)
 ```
 
-----
+---
 
 > `static_branch<T, T Min, T Max>` (https://godbolt.org/z/Tz4ox7ncv)
 
@@ -255,7 +255,7 @@ main:
 .LC2: .asciz "2"
 ```
 
-----
+---
 
 ### Examples
 
@@ -675,13 +675,13 @@ struct static_branch<T, Min, Max> final {
       GITHUB_REPOSITORY qlibs/jmp
       GIT_TAG v5.0.0
     )
-    add_library(mp INTERFACE)
+    add_library(jmp INTERFACE)
     target_include_directories(mp SYSTEM INTERFACE ${mp_SOURCE_DIR})
-    add_library(jmp::jmp ALIAS jmp)
+    add_library(qlibs::jmp ALIAS jmp)
     ```
 
     ```
-    target_link_libraries(${PROJECT_NAME} jmp::jmp)
+    target_link_libraries(${PROJECT_NAME} qlibs::jmp)
     ```
 
 - Acknowledgments
