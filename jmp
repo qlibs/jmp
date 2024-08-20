@@ -701,8 +701,8 @@ struct static_branch<T, Min, Max> final {
 #pragma once
 #pragma GCC system_header
 
-extern "C" int getpagesize();
-extern "C" int mprotect(void*, __SIZE_TYPE__, int);
+extern "C" int getpagesize() throw();
+extern "C" int mprotect(void*, __SIZE_TYPE__, int) throw();
 extern "C" void* __start___jmp [[gnu::section("__jmp")]];
 extern "C" void*  __stop___jmp [[gnu::section("__jmp")]];
 
