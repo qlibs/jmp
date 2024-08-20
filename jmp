@@ -673,7 +673,7 @@ struct static_branch<T, Min, Max> final {
     CPMAddPackage(
       Name jmp
       GITHUB_REPOSITORY qlibs/jmp
-      GIT_TAG v5.0.0
+      GIT_TAG v5.0.1
     )
     add_library(jmp INTERFACE)
     target_include_directories(mp SYSTEM INTERFACE ${mp_SOURCE_DIR})
@@ -706,7 +706,7 @@ extern "C" int mprotect(void*, __SIZE_TYPE__, int) throw();
 extern "C" void* __start___jmp [[gnu::section("__jmp")]];
 extern "C" void*  __stop___jmp [[gnu::section("__jmp")]];
 
-namespace jmp::inline v5_0_0 {
+namespace jmp::inline v5_0_1 {
 using u8  = __UINT8_TYPE__;
 using u16 = __UINT16_TYPE__;
 using u32 = __UINT32_TYPE__;
