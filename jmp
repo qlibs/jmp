@@ -667,21 +667,22 @@ struct static_branch<T, Min, Max> final {
   > Cost = number of inlined versions * memcpy (`5 bytes` for `static_branch<bool>` or `4 bytes` for `static_branch<T>`).
     In case of `[[gnu::noinline]]` the cost is a single memcpy otherwise it will be a loop over all inlined versions.
 
-- How to integrate with CMake/CPM?
+- How to integrate with [CMake.FetchContent](https://cmake.org/cmake/help/latest/module/FetchContent.html)?
 
     ```
-    CPMAddPackage(
-      Name jmp
-      GITHUB_REPOSITORY qlibs/jmp
+    include(FetchContent)
+
+    FetchContent_Declare(
+      qlibs.jmp
+      GIT_REPOSITORY https://github.com/qlibs/jmp
       GIT_TAG v5.0.1
     )
-    add_library(jmp INTERFACE)
-    target_include_directories(mp SYSTEM INTERFACE ${mp_SOURCE_DIR})
-    add_library(qlibs::jmp ALIAS jmp)
+
+    FetchContent_MakeAvailable(qlibs.jmp)
     ```
 
     ```
-    target_link_libraries(${PROJECT_NAME} qlibs::jmp)
+    target_link_libraries(${PROJECT_NAME} PUBLIC qlibs.jmp);
     ```
 
 - Acknowledgments
