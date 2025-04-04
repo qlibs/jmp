@@ -45,7 +45,7 @@
 
 ### Features
 
-- Single header (https://raw.githubusercontent.com/qlibs/jmp/main/jmp - for integration see [FAQ](#faq))
+- Single header (https://raw.githubusercontent.com/qlibs/jmp/main/jmp)
 - Minimal [API](#api)
 - Verifies itself upon include (can be disabled with `-DNTEST` - see [FAQ](#faq))
 
@@ -666,6 +666,11 @@ struct static_branch<T, Min, Max> final {
 
   > Cost = number of inlined versions * memcpy (`5 bytes` for `static_branch<bool>` or `4 bytes` for `static_branch<T>`).
     In case of `[[gnu::noinline]]` the cost is a single memcpy otherwise it will be a loop over all inlined versions.
+
+- How to disable running tests at compile-time?
+
+    > When `-DNTEST` is defined static_asserts tests wont be executed upon include.
+    Note: Use with caution as disabling tests means that there are no gurantees upon include that given compiler/env combination works as expected.
 
 - Acknowledgments
 
