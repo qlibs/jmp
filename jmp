@@ -675,7 +675,7 @@ struct static_branch<T, Min, Max> final {
     FetchContent_Declare(
       qlibs.jmp
       GIT_REPOSITORY https://github.com/qlibs/jmp
-      GIT_TAG v5.0.1
+      GIT_TAG v5.0.2
     )
 
     FetchContent_MakeAvailable(qlibs.jmp)
@@ -707,7 +707,7 @@ extern "C" int mprotect(void*, __SIZE_TYPE__, int) throw();
 extern "C" void* __start___jmp [[gnu::section("__jmp")]] [[gnu::weak]];
 extern "C" void*  __stop___jmp [[gnu::section("__jmp")]] [[gnu::weak]];
 
-namespace jmp::inline v5_0_1 {
+namespace jmp::inline v5_0_2 {
 using u8  = __UINT8_TYPE__;
 using u16 = __UINT16_TYPE__;
 using u32 = __UINT32_TYPE__;
