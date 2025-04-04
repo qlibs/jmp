@@ -704,8 +704,8 @@ struct static_branch<T, Min, Max> final {
 
 extern "C" int getpagesize() throw();
 extern "C" int mprotect(void*, __SIZE_TYPE__, int) throw();
-extern "C" void* __start___jmp [[gnu::section("__jmp")]];
-extern "C" void*  __stop___jmp [[gnu::section("__jmp")]];
+extern "C" void* __start___jmp [[gnu::section("__jmp")]] [[gnu::weak]];
+extern "C" void*  __stop___jmp [[gnu::section("__jmp")]] [[gnu::weak]];
 
 namespace jmp::inline v5_0_1 {
 using u8  = __UINT8_TYPE__;
