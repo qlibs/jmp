@@ -962,7 +962,7 @@ class static_branch<T, Min, Max> final {
 }
 } // namespace jmp
 
-#ifdef NTEST
+#ifndef NTEST
 static_assert(([] {
   constexpr auto expect = [](bool cond) { if (not cond) { void failed(); failed(); } };
 
