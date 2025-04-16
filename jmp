@@ -23,7 +23,7 @@
 //
 #if 0
 // -->
-[Overview](#Overview) / [Examples](#Examples) / [API](#API) / [FAQ](#FAQ)
+[Overview](#Overview) / [Examples](#Examples) / [API](#API) / [FAQ](#FAQ) / [Resources](#Resources)
 
 ## JMP: Static branch library
 
@@ -52,8 +52,6 @@
 ### Requirements
 
 - C++20 ([clang++10+, g++10+](https://en.cppreference.com/w/cpp/compiler_support)) / [x86-64](https://en.wikipedia.org/wiki/X86-64) / [Linux](https://en.wikipedia.org/wiki/Linux)
-
----
 
 ### Overview
 
@@ -121,8 +119,6 @@ main: // $CXX -O3
 .LC0: .asciz "not taken"
 .LC1: .asciz "taken"
 ```
-
----
 
 > `static_branch<bool> vs bool` (https://godbolt.org/z/jvKGdPMWK)
 
@@ -192,8 +188,6 @@ fn():
 [4]: MayLoad [5]: MayStore [6]: HasSideEffects (U)
 ```
 
----
-
 > `static_branch<T, T Min, T Max>` (https://godbolt.org/z/Tz4ox7ncv)
 
 ```cpp
@@ -254,8 +248,6 @@ main:
 .LC1: .asciz "1"
 .LC2: .asciz "2"
 ```
-
----
 
 ### Examples
 
@@ -357,8 +349,6 @@ usage(variant<bool, int, float> const&):
 .LC1: .asciz  "int"
 .LC2: .asciz  "float"
 ```
-
----
 
 > Dispatching techniques (https://godbolt.org/z/cfKP9E8W9)
 
@@ -501,7 +491,6 @@ auto jmp() -> int {                            #   jmp .LBB21_0|.LBB21_1|.LBB21_
                                                #   movl    $77, %eax
                                                #   retq
 ```
----
 
 > [Fast/Slow path](https://en.wikipedia.org/wiki/Fast_path) (https://godbolt.org/z/qvar9ThK9)
 
@@ -530,60 +519,60 @@ trigger(): // $CXX -O3
   jmp slow_path() # [clone .cold]
 ```
 
----
-
 ### API
 
 ```cpp
-/**
- * Minimal overhead (via code patching) static branch
- */
-template<class T, T...> struct static_branch;
-
-template<> struct static_branch<bool> final {
+namespace jmp::inline v5_0_2 {
   /**
-   * static_assert(sizeof(static_branch<bool>) == 1u)
-   * @param value initial branch value (false)
+   * Minimal overhead (via code patching) static branch
    */
-  constexpr explicit(false) static_branch(const bool value) noexcept;
-  constexpr static_branch(const static_branch&) noexcept = delete;
-  constexpr static_branch(static_branch&&) noexcept = delete;
-  constexpr static_branch& operator=(const static_branch&) noexcept = delete;
-  constexpr static_branch& operator=(static_branch&&) noexcept = delete;
+  template<class T, T...> struct static_branch;
 
-  /**
-   * Updates branch value
-   * @param value new branch value
-   */
-  constexpr const auto& operator=(const bool value) const noexcept;
+  template<> struct static_branch<bool> final {
+    /**
+     * static_assert(sizeof(static_branch<bool>) == 1u)
+     * @param value initial branch value (false)
+     */
+    constexpr explicit(false) static_branch(const bool value) noexcept;
+    constexpr static_branch(const static_branch&) noexcept = delete;
+    constexpr static_branch(static_branch&&) noexcept = delete;
+    constexpr static_branch& operator=(const static_branch&) noexcept = delete;
+    constexpr static_branch& operator=(static_branch&&) noexcept = delete;
 
-  [[gnu::always_inline]] [[nodiscard]]
-  inline explicit(false) operator bool() const noexcept;
-};
+    /**
+     * Updates branch value
+     * @param value new branch value
+     */
+    constexpr const auto& operator=(const bool value) const noexcept;
 
-template<class T, T Min, T Max>
-  requires requires(T t) { reinterpret_cast<T>(t); } and
-  (Max - Min >= 2 and Max - Min <= 7)
-struct static_branch<T, Min, Max> final {
-  /**
-   * static_assert(sizeof(static_branch<bool>) == 1u)
-   * @param value initial branch value (false)
-   */
-  constexpr explicit(false) static_branch(const T value) noexcept;
-  constexpr static_branch(const static_branch&) noexcept = delete;
-  constexpr static_branch(static_branch&&) noexcept = delete;
-  constexpr static_branch& operator=(const static_branch&) noexcept = delete;
-  constexpr static_branch& operator=(static_branch&&) noexcept = delete;
+    [[gnu::always_inline]] [[nodiscard]]
+    inline explicit(false) operator bool() const noexcept;
+  };
 
-  /**
-   * Updates branch value
-   * @param value new branch value
-   */
-  constexpr const auto& operator=(const T value) const noexcept;
+  template<class T, T Min, T Max>
+    requires requires(T t) { reinterpret_cast<T>(t); } and
+    (Max - Min >= 2 and Max - Min <= 7)
+  struct static_branch<T, Min, Max> final {
+    /**
+     * static_assert(sizeof(static_branch<bool>) == 1u)
+     * @param value initial branch value (false)
+     */
+    constexpr explicit(false) static_branch(const T value) noexcept;
+    constexpr static_branch(const static_branch&) noexcept = delete;
+    constexpr static_branch(static_branch&&) noexcept = delete;
+    constexpr static_branch& operator=(const static_branch&) noexcept = delete;
+    constexpr static_branch& operator=(static_branch&&) noexcept = delete;
 
-  [[gnu::always_inline]] [[nodiscard]]
-  inline explicit(false) operator T() const noexcept;
-};
+    /**
+     * Updates branch value
+     * @param value new branch value
+     */
+    constexpr const auto& operator=(const T value) const noexcept;
+
+    [[gnu::always_inline]] [[nodiscard]]
+    inline explicit(false) operator T() const noexcept;
+  };
+} // namespace jmp
 ```
 
 ---
@@ -672,17 +661,22 @@ struct static_branch<T, Min, Max> final {
     > When `-DNTEST` is defined static_asserts tests wont be executed upon include.
     Note: Use with caution as disabling tests means that there are no gurantees upon include that given compiler/env combination works as expected.
 
-- Acknowledgments
+### Resources
 
-  > https://docs.kernel.org/staging/static-keys.html,
-  > https://www.intel.com/content/www/us/en/developer/articles/technical/intel-sdm.html,
-  > https://www.agner.org/optimize/instruction_tables.pdf,
-  > https://gcc.gnu.org/onlinedocs/gcc/Extended-Asm.html,
-  > https://www.felixcloutier.com/documents/gcc-asm.html,
-  > https://www.felixcloutier.com/x86,
-  > https://uops.info/table.html,
-  > https://arxiv.org/abs/2308.14185,
-  > https://arxiv.org/abs/2011.13127
+> - https://docs.kernel.org/staging/static-keys.html
+> - https://www.intel.com/content/www/us/en/developer/articles/technical/intel-sdm.html
+> - https://www.agner.org/optimize/instruction_tables.pdf
+> - https://gcc.gnu.org/onlinedocs/gcc/Extended-Asm.html
+> - https://www.felixcloutier.com/documents/gcc-asm.html
+> - https://www.felixcloutier.com/x86
+> - https://uops.info/table.html
+> - https://arxiv.org/abs/2308.14185
+> - https://arxiv.org/abs/2011.13127
+
+### License
+
+> - [MIT](LICENSE)
+
 <!--
 #endif
 
