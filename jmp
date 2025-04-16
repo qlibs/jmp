@@ -36,10 +36,11 @@
 
 ### Use cases
 
-> Performance
-> - branch is relatively stable through its life cycle `and/or`
-> - branch is expensive to compute / require [memory access](https://en.wikipedia.org/wiki/CPU_cache) `and/or`
-> - branch is hard to learn by the [branch predictor](https://en.wikipedia.org/wiki/Branch_predictor)
+- Performance
+
+  - branch is relatively stable through its life cycle `and/or`
+  - branch is expensive to compute / require [memory access](https://en.wikipedia.org/wiki/CPU_cache) `and/or`
+  - branch is hard to learn by the [branch predictor](https://en.wikipedia.org/wiki/Branch_predictor)
 
   > Examples: logging, tracing, dispatching, fast path, devirtualization, ...
 
@@ -579,87 +580,87 @@ namespace jmp::inline v5_0_2 {
 
 ### FAQ
 
-- How does it work?
-
-  > `jmp` is using technique called code patching - which basically means that the code modifies itself.
-
-  `jmp::static_branch` is based on https://docs.kernel.org/staging/static-keys.html and it requires `asm goto` support (gcc, clang).
-  `jmp` currently supports x86-64 Linux, but other platforms can be added using the same technique.
-
-  > Walkthrough
-
-    ```cpp
-    constexpr jmp::static_branch<bool> b = false;
-
-    if (b) {
-      return 42;
-    } else {
-      return 0;
-    }
-    ```
-
-  > Will emit...
-
-    ```cpp
-    main:
-      .byte 15 31 68 0 0 # nop - https://www.felixcloutier.com/x86/nop
-    .LBB0:
-      xor eax, eax # return 0
-      ret
-    .LBB1:
-      mov eax, 42 # return 42
-      ret
-    ```
-
-  > Will effectively execute...
-
-    ```cpp
-    main:
-      nop
-      xor eax, eax # return 0
-      ret
-    ```
-
-  > If the branch value will be changed (at run-time)...
-
-    ```cpp
-    b = true;
-
-    if (b) {
-      return 42;
-    } else {
-      return 0;
-    }
-    ```
-
-  > Will emit...
-
-    ```cpp
-    main:
-      call b.operator=(true); # nop->jmp or jmp->nop
-
-      jmp .LBB1: (nop->jmp - changed in the memory of the program)
-    .LBB0:
-      xor eax, eax # return 0
-      ret
-    .LBB1:
-      mov eax, 42 # return 42
-      ret
-    ```
-
-- What platforms are supported?
-
-  > Only x86_64 is currently supported but the technique is compatible with other platforms as proven by https://docs.kernel.org/staging/static-keys.html.
-
-- What is the cost of switching the branch?
-
-  > Cost = number of inlined versions * memcpy (`5 bytes` for `static_branch<bool>` or `4 bytes` for `static_branch<T>`).
-    In case of `[[gnu::noinline]]` the cost is a single memcpy otherwise it will be a loop over all inlined versions.
-
-- How to disable running tests at compile-time?
-
-    > When `-DNTEST` is defined static_asserts tests wont be executed upon include.
-    Note: Use with caution as disabling tests means that there are no gurantees upon include that given compiler/env combination works as expected.
+> - How does it work?
+>
+>   > `jmp` is using technique called code patching - which basically means that the code modifies itself.
+>
+>   `jmp::static_branch` is based on https://docs.kernel.org/staging/static-keys.html and it requires `asm goto` support (gcc, clang).
+>   `jmp` currently supports x86-64 Linux, but other platforms can be added using the same technique.
+>
+>   > Walkthrough
+>
+>     ```cpp
+>     constexpr jmp::static_branch<bool> b = false;
+>
+>     if (b) {
+>       return 42;
+>     } else {
+>       return 0;
+>     }
+>     ```
+>
+>   > Will emit...
+>
+>     ```cpp
+>     main:
+>       .byte 15 31 68 0 0 # nop - https://www.felixcloutier.com/x86/nop
+>     .LBB0:
+>       xor eax, eax # return 0
+>       ret
+>     .LBB1:
+>       mov eax, 42 # return 42
+>       ret
+>     ```
+>
+>   > Will effectively execute...
+>
+>     ```cpp
+>     main:
+>       nop
+>       xor eax, eax # return 0
+>       ret
+>     ```
+>
+>   > If the branch value will be changed (at run-time)...
+>
+>     ```cpp
+>     b = true;
+>
+>     if (b) {
+>       return 42;
+>     } else {
+>       return 0;
+>     }
+>     ```
+>
+>   > Will emit...
+>
+>     ```cpp
+>     main:
+>       call b.operator=(true); # nop->jmp or jmp->nop
+>
+>       jmp .LBB1: (nop->jmp - changed in the memory of the program)
+>     .LBB0:
+>       xor eax, eax # return 0
+>       ret
+>     .LBB1:
+>       mov eax, 42 # return 42
+>       ret
+>     ```
+>
+> - What platforms are supported?
+>
+>   > Only x86_64 is currently supported but the technique is compatible with other platforms as proven by https://docs.kernel.org/staging/static-keys.html.
+>
+> - What is the cost of switching the branch?
+>
+>   > Cost = number of inlined versions * memcpy (`5 bytes` for `static_branch<bool>` or `4 bytes` for `static_branch<T>`).
+>     In case of `[[gnu::noinline]]` the cost is a single memcpy otherwise it will be a loop over all inlined versions.
+>
+> - How to disable running tests at compile-time?
+>
+>     > When `-DNTEST` is defined static_asserts tests wont be executed upon include.
+>     Note: Use with caution as disabling tests means that there are no gurantees upon include that given compiler/env combination works as expected.
 
 ### Resources
 
