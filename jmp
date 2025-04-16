@@ -34,15 +34,13 @@
 
   > https://en.wikipedia.org/wiki/Branch_(computer_science)
 
-### Use cases
+### Use cases (performance)
 
-- Performance
+- branch is relatively stable through its life cycle `and/or`
+- branch is expensive to compute / require [memory access](https://en.wikipedia.org/wiki/CPU_cache) `and/or`
+- branch is hard to learn by the [branch predictor](https://en.wikipedia.org/wiki/Branch_predictor)
 
-  - branch is relatively stable through its life cycle `and/or`
-  - branch is expensive to compute / require [memory access](https://en.wikipedia.org/wiki/CPU_cache) `and/or`
-  - branch is hard to learn by the [branch predictor](https://en.wikipedia.org/wiki/Branch_predictor)
-
-  > Examples: logging, tracing, dispatching, fast path, devirtualization, ...
+> Examples: logging, tracing, dispatching, fast path, devirtualization, ...
 
 ### Features
 
