@@ -44,7 +44,7 @@
 
 ### Features
 
-- Single header (https://raw.githubusercontent.com/qlibs/jmp/main/jmp)
+- Single header (https://raw.githubusercontent.com/qlibs/jmp/main/jmp) / C++20 module (https://raw.githubusercontent.com/qlibs/jmp/main/jmp.cppm)
 - Minimal [API](#api)
 - Verifies itself upon include (can be disabled with `-DNTEST` - see [FAQ](#faq))
 
