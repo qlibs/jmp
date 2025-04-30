@@ -28,7 +28,6 @@ export module jmp;
 export namespace jmp {
   using jmp::init;
   using jmp::static_branch;
-  using jmp::array;
 } // namespace jmp
 
 // -*- mode: c++; -*-
