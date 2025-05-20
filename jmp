@@ -668,7 +668,7 @@ namespace jmp::inline v5_0_2 {
 > - X86 Instruction Reference - https://www.felixcloutier.com/x86
 > - Latency, Throughput, and Port Usage Information - https://uops.info/table.html
 > - Extended Asm - https://gcc.gnu.org/onlinedocs/gcc/Extended-Asm.html
-> - GCC's Assembler Syntax - https://www.felixcloutier.com/documents/gcc-asm.html
+> - GCC`s Assembler Syntax - https://www.felixcloutier.com/documents/gcc-asm.html
 > - Copy-and-Patch Compilation - https://arxiv.org/abs/2308.14185
 > - Semi-static Conditions in Low-latency C++ for High Frequency Trading - https://arxiv.org/abs/2011.13127
 
