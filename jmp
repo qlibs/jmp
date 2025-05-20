@@ -521,7 +521,7 @@ trigger(): // $CXX -O3
 ### API
 
 ```cpp
-namespace jmp::inline v5_0_2 {
+namespace jmp::inline v5_0_3 {
   /**
    * Minimal overhead (via code patching) static branch
    */
@@ -687,7 +687,7 @@ extern "C" int mprotect(void*, __SIZE_TYPE__, int) throw();
 extern "C" void* __start___jmp [[gnu::section("__jmp")]] [[gnu::weak]];
 extern "C" void*  __stop___jmp [[gnu::section("__jmp")]] [[gnu::weak]];
 
-namespace jmp::inline v5_0_2 {
+namespace jmp::inline v5_0_3 {
 using u8  = __UINT8_TYPE__;
 using u16 = __UINT16_TYPE__;
 using u32 = __UINT32_TYPE__;
