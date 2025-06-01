@@ -1006,7 +1006,7 @@ namespace jmp::inline v5_0_4 {
     }(), true));
 
     constexpr auto expect = [](bool cond) {
-      if (not cond) { struct failed{}; throw failed{}; }
+      if (not cond) { __builtin_abort(); }
     };
 
     static constexpr jmp::static_branch<bool> b = false;
