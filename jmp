@@ -687,7 +687,7 @@ extern "C" int mprotect(void*, __SIZE_TYPE__, int) throw();
 extern "C" void* __start___jmp [[gnu::section("__jmp")]] [[gnu::weak]];
 extern "C" void*  __stop___jmp [[gnu::section("__jmp")]] [[gnu::weak]];
 
-namespace jmp::inline v5_0_3 {
+namespace jmp::inline v5_0_4 {
 using u8  = __UINT8_TYPE__;
 using u16 = __UINT16_TYPE__;
 using u32 = __UINT32_TYPE__;
@@ -963,41 +963,97 @@ class static_branch<T, Min, Max> final {
 } // namespace jmp
 
 #ifndef NTEST
-static_assert(([] {
-  constexpr auto expect = [](bool cond) { if (not cond) { void failed(); failed(); } };
+namespace jmp::inline v5_0_4 {
+  inline auto test() {
+    static_assert(([] {
+      constexpr auto expect = [](bool cond) {
+        if (not cond) { void failed(); failed(); }
+      };
 
-  // jmp::array
-  {
+      // jmp::array
+      {
+        {
+          jmp::array<int, 1u> array{42};
+          expect(1u == array.size());
+          expect(42 == array[0u]);
+        }
+
+        {
+          jmp::array<jmp::u32, 2u> array{4u, 2u};
+          expect(2u == array.size());
+          expect(4u == array[0u]);
+          expect(2u == array[1u]);
+        }
+      }
+
+      // jmp::static_branch
+      {
+        static_assert(1u == sizeof(jmp::static_branch<bool>));
+        static_assert(1u == sizeof(jmp::static_branch<jmp::u8, 0, 2>));
+        static_assert(1u == sizeof(jmp::static_branch<jmp::u16, 0, 3>));
+        static_assert(1u == sizeof(jmp::static_branch<jmp::u32, 1, 4>));
+        static_assert(1u == sizeof(jmp::static_branch<jmp::u64, 2, 7>));
+        static_assert(1u == sizeof(jmp::static_branch<jmp::size_t, 1, 5>));
+
+        static_assert(not [](auto... ts) { return requires { jmp::static_branch<bool>{ts...}; }; }());
+        static_assert(not [](auto... ts) { return requires { jmp::static_branch<bool>{ts...}; }; }(jmp::static_branch<bool>{false}));
+        static_assert([](auto value) { return requires { jmp::static_branch<bool>{value}; }; }(false));
+
+        static_assert(not [](auto... ts) { return requires { jmp::static_branch<jmp::u32, 0, 2>{ts...}; }; }());
+        static_assert(not [](auto... ts) { return requires { jmp::static_branch<jmp::u32, 0, 3>{ts...}; }; }(jmp::static_branch<jmp::u32, 0, 3>{0u}));
+        static_assert([](auto value) { return requires { jmp::static_branch<jmp::u32, 1, 5>{value}; }; }(0u));
+      }
+    }(), true));
+
+    constexpr auto expect = [](bool cond) {
+      if (not cond) { struct failed{}; throw failed{}; }
+    };
+
+    static constexpr jmp::static_branch<bool> b = false;
+
+    auto fn_bool = [&] {
+      if (b) {
+        return 42;
+      } else {
+        return 0;
+      }
+    };
+
+    static constexpr jmp::static_branch<int, 0, 2> i = 0;
+
+    auto fn_int = [&] {
+      switch (i) {
+        default: return 0;
+        case 0:  return 42;
+        case 1:  return 99;
+        case 2:  return 123;
+      }
+    };
+
+    (void)jmp::init();
+
     {
-      jmp::array<int, 1u> array{42};
-      expect(1u == array.size());
-      expect(42 == array[0u]);
+      expect(0 == fn_bool());
+
+      b = false;
+      expect(0 == fn_bool());
+
+      b = true;
+      expect(42 == fn_bool());
     }
 
     {
-      jmp::array<jmp::u32, 2u> array{4u, 2u};
-      expect(2u == array.size());
-      expect(4u == array[0u]);
-      expect(2u == array[1u]);
+      expect(42 == fn_int());
+
+      i = 0;
+      expect(42 == fn_int());
+
+      i = 1;
+      expect(99 == fn_int());
+
+      i = 2;
+      expect(123 == fn_int());
     }
   }
-
-  // jmp::static_branch
-  {
-    static_assert(1u == sizeof(jmp::static_branch<bool>));
-    static_assert(1u == sizeof(jmp::static_branch<jmp::u8, 0, 2>));
-    static_assert(1u == sizeof(jmp::static_branch<jmp::u16, 0, 3>));
-    static_assert(1u == sizeof(jmp::static_branch<jmp::u32, 1, 4>));
-    static_assert(1u == sizeof(jmp::static_branch<jmp::u64, 2, 7>));
-    static_assert(1u == sizeof(jmp::static_branch<jmp::size_t, 1, 5>));
-
-    static_assert(not [](auto... ts) { return requires { jmp::static_branch<bool>{ts...}; }; }());
-    static_assert(not [](auto... ts) { return requires { jmp::static_branch<bool>{ts...}; }; }(jmp::static_branch<bool>{false}));
-    static_assert([](auto value) { return requires { jmp::static_branch<bool>{value}; }; }(false));
-
-    static_assert(not [](auto... ts) { return requires { jmp::static_branch<jmp::u32, 0, 2>{ts...}; }; }());
-    static_assert(not [](auto... ts) { return requires { jmp::static_branch<jmp::u32, 0, 3>{ts...}; }; }(jmp::static_branch<jmp::u32, 0, 3>{0u}));
-    static_assert([](auto value) { return requires { jmp::static_branch<jmp::u32, 1, 5>{value}; }; }(0u));
-  }
-}(), true));
+} // namespace jmp
 #endif // NTEST
