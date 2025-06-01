@@ -26,6 +26,7 @@ module;
 export module jmp;
 
 export namespace jmp {
+  using jmp::test;
   using jmp::init;
   using jmp::static_branch;
 } // namespace jmp
